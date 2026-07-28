@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@anthropic-ai/sdk":   ["./node_modules/@anthropic-ai/sdk"],
+      "@anthropic-ai/sdk/*": ["./node_modules/@anthropic-ai/sdk/*"],
+      "viem":    ["./node_modules/viem"],
+      "viem/*":  ["./node_modules/viem/*"],
+      "openai":  ["./node_modules/openai"],
+      "openai/*":["./node_modules/openai/*"],
+      "zod":     ["./node_modules/zod"],
+      "zod/*":   ["./node_modules/zod/*"],
+      "@upstash/redis":   ["./node_modules/@upstash/redis"],
+      "@upstash/redis/*": ["./node_modules/@upstash/redis/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "../packages/agent-core/src/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

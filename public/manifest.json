@@ -1,0 +1,14 @@
+{
+  "name": "Cowry — Talk. Send. Automate.",
+  "short_name": "Cowry",
+  "description": "AI-powered crypto payments on Celo",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#0A0F1E",
+  "theme_color": "#00D4FF",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/cowry.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/cowry.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
