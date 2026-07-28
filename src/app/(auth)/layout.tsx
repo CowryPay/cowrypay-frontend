@@ -5,7 +5,7 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="h-full flex flex-col w-full max-w-md mx-auto bg-cowry-dark"

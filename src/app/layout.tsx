@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
   title:       "Cowry — Talk. Send. Automate.",
@@ -32,7 +31,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className="h-full overflow-hidden bg-cowry-dark font-sans antialiased">
-        <ServiceWorkerRegister />
         {children}
       </body>
     </html>

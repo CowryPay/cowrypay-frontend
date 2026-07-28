@@ -78,10 +78,10 @@ export default function LandingPage() {
         <div className="flex items-center gap-3">
           
           <Link
-            href="/app"
+            href="/onboarding"
             className="text-sm font-semibold bg-cowry-green text-black px-5 py-2 rounded-full hover:opacity-90 transition-opacity"
           >
-            Open App →
+            Get Started →
           </Link>
         </div>
       </nav>
@@ -103,7 +103,7 @@ export default function LandingPage() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
           <Link
-            href="/app"
+            href="/onboarding"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-cowry-green text-black font-bold px-8 py-3 rounded-full text-sm hover:opacity-90 transition-opacity"
           >
             Launch App →
@@ -319,7 +319,7 @@ export default function LandingPage() {
             first payment in under a minute.
           </p>
           <Link
-            href="/app"
+            href="/onboarding"
             className="inline-flex items-center gap-2 bg-cowry-green text-black font-bold px-8 py-3 rounded-full text-sm hover:opacity-90 transition-opacity"
           >
             Get started, it&apos;s free →

@@ -182,7 +182,7 @@ export function ChatInterface() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 bg-cowry-darker">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-2 bg-cowry-darker">
         {messages.length === 0 && (
           <div className="flex flex-col items-center gap-3 pt-16 sm:pt-24">
             <div className="flex flex-col gap-3 w-full max-w-xs">

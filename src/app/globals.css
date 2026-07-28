@@ -35,6 +35,16 @@
   animation: marquee-right 30s linear infinite;
 }
 
+/* Scrollable but no visible scrollbar track — used as an overflow safety net
+   on screens that should normally fit without scrolling. */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Gradient border */
 .gradient-border {
   border: 1px solid transparent;
