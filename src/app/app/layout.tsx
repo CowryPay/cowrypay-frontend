@@ -8,7 +8,7 @@ export const viewport: Viewport = {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="h-full flex flex-col w-full max-w-md mx-auto bg-cowry-dark"
+      className="h-full flex flex-col w-full max-w-md lg:max-w-none mx-auto bg-cowry-dark"
       style={{
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",

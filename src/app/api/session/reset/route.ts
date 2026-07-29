@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clearSession } from "@cowry/agent-core/state.js";
 
 export const runtime = "nodejs";
 
+// STUB: @cowry/agent-core isn't checked out in this environment, so there's no
+// real session store to clear. No-op until the sibling package is wired up.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   const { sessionId } = body;
@@ -11,13 +12,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "sessionId (string) required" }, { status: 400 });
   }
 
-  try {
-    await clearSession(sessionId.trim());
-    return NextResponse.json({ ok: true });
-  } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json({ ok: true });
 }

@@ -64,13 +64,12 @@ export function useChat(walletAddress: string | null) {
   }, [addMessage]);
 
   const fetchAgentResponse = useCallback(async (text: string, signal?: AbortSignal) => {
-    if (!walletAddress) throw new Error("Wallet not connected");
-    return chat(text, walletAddress, getSessionId(), signal);
+    return chat(text, walletAddress ?? "", getSessionId(), signal);
   }, [walletAddress, getSessionId]);
 
   const send = useCallback(
     async (text: string) => {
-      if (!walletAddress || loading) return;
+      if (loading) return;
 
       scheduleIdleReset();
       addMessage({ role: "user", text });

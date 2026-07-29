@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadAgentEnv } from "@/lib/loadAgentEnv";
-import { getBridgeStatus } from "@cowry/agent-core/lifi/bridgeClient.js";
-
-loadAgentEnv();
 
 export const runtime = "nodejs";
 
+// STUB: @cowry/agent-core isn't checked out in this environment.
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const txHash      = searchParams.get("txHash") ?? "";
@@ -19,10 +16,5 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  try {
-    const status = await getBridgeStatus(txHash, fromChainId, toChainId);
-    return NextResponse.json(status);
-  } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 502 });
-  }
+  return NextResponse.json({ status: "NOT_FOUND" });
 }

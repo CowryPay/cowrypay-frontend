@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { loadAgentEnv } from "@/lib/loadAgentEnv";
-import {
-  getCeloBridgeSource,
-  getCeloOutboundDestinations,
-} from "@cowry/agent-core/lifi/bridgeClient.js";
 
 export const runtime = "nodejs";
 
-loadAgentEnv();
-
+// STUB: @cowry/agent-core isn't checked out in this environment. Empty
+// destinations — the cross-chain send UI renders with nothing to select
+// rather than crashing, until the real bridge client is wired up.
 export function GET() {
-  const source = getCeloBridgeSource();
-  const destinations = getCeloOutboundDestinations();
-  return NextResponse.json({ source, destinations });
+  return NextResponse.json({
+    source: { chainId: 42220, name: "Celo", usdcDecimals: 6, usdmDecimals: 18 },
+    destinations: [],
+  });
 }

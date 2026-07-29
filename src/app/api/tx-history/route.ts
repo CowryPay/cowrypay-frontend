@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
-import { fetchTransactionHistory } from "@cowry/agent-core/txHistory.js";
 
 export const runtime = "nodejs";
 
+// STUB: @cowry/agent-core isn't checked out in this environment.
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get("address");
   const page = Number(req.nextUrl.searchParams.get("page") ?? "1");
@@ -15,10 +15,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "page must be a positive integer" }, { status: 400 });
   }
 
-  try {
-    const out = await fetchTransactionHistory(address, page, 10);
-    return NextResponse.json(out);
-  } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
-  }
+  return NextResponse.json({ items: [], hasMore: false });
 }

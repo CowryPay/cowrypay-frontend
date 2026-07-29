@@ -1,42 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAddress } from "viem";
-import { handleUserMessage } from "@cowry/agent-core/pipeline.js";
-import { createResolutionDeps } from "@cowry/agent-core/deps/createDeps.js";
-import { createMessageParser } from "@cowry/agent-core/parseMessage.js";
-
-// Singletons — initialised once per cold start, reused across requests
-const deps        = createResolutionDeps();
-const parseMessage = createMessageParser();
 
 export const runtime = "nodejs";
 
+// STUB: @cowry/agent-core isn't checked out in this environment, so there's no
+// real agent pipeline to run. Echo a placeholder "info" response so the chat
+// UI (bubbles, loading state, etc.) is fully previewable in the meantime.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
-  const { message, walletAddress, sessionId = "default" } = body;
+  const { message } = body;
 
   if (typeof message !== "string" || !message.trim()) {
     return NextResponse.json({ error: "message (string) required" }, { status: 400 });
   }
 
-  const wallet =
-    typeof walletAddress === "string" && isAddress(walletAddress)
-      ? (walletAddress as `0x${string}`)
-      : undefined;
-
-  try {
-    const out = await handleUserMessage(
-      String(sessionId),
-      message,
-      deps,
-      parseMessage,
-      wallet,
-      req.signal,
-    );
-    return NextResponse.json(out);
-  } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json({
+    type: "info",
+    message: "The Cowry AI backend isn't connected in this environment yet — this is a placeholder response so you can preview the chat UI.",
+  });
 }

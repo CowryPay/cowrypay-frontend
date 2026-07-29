@@ -8,9 +8,9 @@ import { useVoiceRecorder }   from "@/hooks/useVoiceRecorder";
 import { transcribeAudio }    from "@/lib/agent";
 import { MessageBubble }      from "./MessageBubble";
 import { CrossChainSendPanel } from "./CrossChainSendPanel";
-import { GrantAccessScreen }  from "./GrantAccessScreen";
 import { CommandMenu }        from "./CommandMenu";
 import { TransactionHistoryModal } from "./TransactionHistoryModal";
+import { SettingsPanel }      from "./SettingsPanel";
 import type { Message }       from "@/lib/types";
 
 function formatDuration(totalSec: number): string {
@@ -32,12 +32,7 @@ const SUGGESTIONS: Suggestion[] = [
 ];
 
 export function ChatInterface() {
-  const {
-    address, shortAddress,
-    isConnecting, walletError, onAccessGranted,
-    ensureCelo, wrongChain, isConnected,
-    hasGrantedAccess, isCheckingAccess,
-  } = useWallet();
+  const { address, shortAddress, ensureCelo, wrongChain } = useWallet();
 
   const { messages, loading, txLoading, send, stop, confirm, cancel, signAndSend, addBotMessage, bottomRef } =
     useChat(address ?? null);
@@ -46,6 +41,7 @@ export function ChatInterface() {
   const [showCrossChainSend, setShowCrossChainSend] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
   const [showTxHistory, setShowTxHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -86,74 +82,26 @@ export function ChatInterface() {
     signAndSend(r.tx.transactions, r.tx.token.symbol);
   };
 
-  // No wallet connected / auto-connect failed
-  if (!isConnecting && !isConnected) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 bg-cowry-dark text-white">
-        <div className="text-center space-y-3">
-          <div className="relative mx-auto w-24 h-24 animate-float">
-            <div className="absolute inset-0 rounded-2xl blur-2xl bg-cowry-blue/20 scale-125" />
-            <Image src="/cowry.png" alt="Cowry" width={96} height={96} className="relative rounded-2xl shadow-2xl" />
-          </div>
-          <h1 className="text-2xl font-black mt-2">Cowry</h1>
-          <p className="text-sm text-cowry-muted max-w-xs">
-            {walletError ?? "No wallet found. Please open this app in a Web3 browser."}
-          </p>
-        </div>
-        <Link href="/" className="text-xs text-cowry-muted hover:text-white transition-colors underline underline-offset-2">
-          Back to homepage
-        </Link>
-      </div>
-    );
-  }
-
-  // Wallet provider / account — full splash only until we have an address
-  if (isConnecting) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-cowry-dark">
-        <div className="animate-pulse">
-          <Image src="/Group%203.png" alt="CowryPay" width={160} height={48} className="object-contain" priority />
-        </div>
-        <p className="text-xs text-cowry-muted">Connecting wallet…</p>
-      </div>
-    );
-  }
-
-  // Access gate — wallets that haven't authorized Cowry AI yet
-  // Show spinner while checking allowance, then grant screen if not yet granted
-  if (isConnected && (isCheckingAccess || !hasGrantedAccess)) {
-    if (isCheckingAccess) {
-      return (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-cowry-dark">
-          <div className="w-8 h-8 rounded-full border-2 border-cowry-green border-t-transparent animate-spin" />
-          <p className="text-xs text-cowry-muted">Checking access…</p>
-        </div>
-      );
-    }
-    return (
-      <GrantAccessScreen
-        address={address!}
-        onGranted={onAccessGranted}
-      />
-    );
-  }
-
-  // Main chat — wallets that have authorized Cowry AI
+  // Main chat — wallet connection and access gating removed for now
+  // (design-focused phase; BlockRadar wallet integration lands later).
   return (
     <div className="relative flex-1 flex flex-col overflow-hidden bg-cowry-dark">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-cowry-dark border-b border-cowry-border flex-shrink-0">
+      <div className="flex items-center justify-between px-4 lg:px-10 py-3 lg:py-4 bg-cowry-dark border-b border-cowry-border flex-shrink-0">
         <Link
           href="/"
-          className="flex items-center justify-center w-9 h-9 rounded-full bg-cowry-card border border-cowry-border hover:border-cowry-green/40 transition-colors"
+          className="flex items-center justify-center w-9 h-9 rounded-full bg-cowry-card border border-cowry-border hover:border-cowry-green/40 transition-colors lg:hidden"
           title="Back to homepage"
         >
           <Image src="/logo.png" alt="Cowry" width={18} height={18} />
         </Link>
+        <Link href="/" className="hidden lg:block" title="Back to homepage">
+          <Image src="/CowryPay.png" alt="CowryPay" width={140} height={27} className="object-contain" />
+        </Link>
 
         <button
-          className="flex items-center gap-1.5 text-xs font-medium text-white border border-cowry-green/60 rounded-full px-4 py-1.5 hover:border-cowry-green transition-colors"
+          className="flex items-center gap-1.5 text-xs lg:text-sm font-medium text-white border border-cowry-green/60 rounded-full px-4 py-1.5 hover:border-cowry-green transition-colors"
           title={address ?? undefined}
         >
           <span>{shortAddress ?? "Wallet"}</span>
@@ -162,13 +110,36 @@ export function ChatInterface() {
           </svg>
         </button>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 lg:gap-3">
+          <button
+            onClick={() => setShowTxHistory(true)}
+            className="hidden lg:flex w-8 h-8 items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
+            title="Transaction history"
+          >
+            <Image src="/history.png" alt="" width={20} height={20} />
+          </button>
+
           <button
             onClick={() => setShowCrossChainSend(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
+            className="lg:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
             title="Send USDC from Celo to another chain"
           >
             <Image src="/Vector%202.png" alt="Send" width={18} height={18} />
+          </button>
+          <button
+            onClick={() => setShowCrossChainSend(true)}
+            className="hidden lg:flex items-center gap-2 text-sm font-medium text-white border border-cowry-border rounded-full pl-4 pr-3 py-1.5 hover:border-cowry-green/40 transition-colors"
+          >
+            Cross-chain send
+            <Image src="/Vector%202.png" alt="" width={16} height={16} />
+          </button>
+
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex w-8 h-8 items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
+            title="Settings"
+          >
+            <Image src="/settings.png" alt="" width={20} height={20} />
           </button>
         </div>
       </div>
@@ -182,10 +153,11 @@ export function ChatInterface() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-2 bg-cowry-darker">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 lg:px-10 py-4 bg-cowry-darker">
+       <div className="space-y-2 lg:max-w-3xl lg:mx-auto">
         {messages.length === 0 && (
           <div className="flex flex-col items-center gap-3 pt-16 sm:pt-24">
-            <div className="flex flex-col gap-3 w-full max-w-xs">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full max-w-xs lg:max-w-2xl">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s.text}
@@ -242,9 +214,10 @@ export function ChatInterface() {
         )}
 
         <div ref={bottomRef} />
+       </div>
       </div>
 
-      <div className="bg-cowry-dark border-t border-cowry-border px-3 py-3 flex items-center gap-2 flex-shrink-0">
+      <div className="bg-cowry-dark border-t border-cowry-border px-3 lg:px-10 py-3 flex items-center gap-2 flex-shrink-0">
         <button
           onClick={() => setShowCommands((v) => !v)}
           disabled={isRecording}
@@ -321,6 +294,11 @@ export function ChatInterface() {
         </button>
       </div>
 
+      <div className="hidden lg:flex items-center justify-between px-10 py-3 text-xs text-cowry-muted flex-shrink-0">
+        <span>© 2026 CowryPay</span>
+        <span>Live on Celo Mainnet</span>
+      </div>
+
       {recordError && (
         <div className="px-4 pb-2 -mt-1 flex-shrink-0">
           <p className="text-xs text-red-400">{recordError}</p>
@@ -343,6 +321,7 @@ export function ChatInterface() {
           }}
           onOpenCrossChain={() => { setShowCommands(false); setShowCrossChainSend(true); }}
           onOpenTxHistory={() => { setShowCommands(false); setShowTxHistory(true); }}
+          onOpenSettings={() => { setShowCommands(false); setShowSettings(true); }}
           onClose={() => setShowCommands(false)}
         />
       )}
@@ -352,6 +331,10 @@ export function ChatInterface() {
           walletAddress={address}
           onClose={() => setShowTxHistory(false)}
         />
+      )}
+
+      {showSettings && (
+        <SettingsPanel onClose={() => setShowSettings(false)} />
       )}
     </div>
   );

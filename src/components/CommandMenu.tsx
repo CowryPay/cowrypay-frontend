@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import Image from "next/image";
 
-type Action = "cross-chain" | "tx-history";
+type Action = "cross-chain" | "tx-history" | "settings";
 
 interface GridItem {
   label:    string;
@@ -73,16 +73,23 @@ const LIST_ITEMS: ListItem[] = [
       </svg>
     ),
   },
+  {
+    label: "Settings",
+    desc:  "Payment, security, and notifications",
+    action: "settings",
+    icon: <Image src="/settings.png" alt="" width={20} height={20} />,
+  },
 ];
 
 interface Props {
   onSelect:        (template: string) => void;
   onOpenCrossChain: () => void;
   onOpenTxHistory:  () => void;
+  onOpenSettings:   () => void;
   onClose:         () => void;
 }
 
-export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onClose }: Props) {
+export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpenSettings, onClose }: Props) {
   // Close on Escape key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -93,6 +100,7 @@ export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onClo
   const run = (item: { template?: string; action?: Action }) => {
     if (item.action === "cross-chain") onOpenCrossChain();
     else if (item.action === "tx-history") onOpenTxHistory();
+    else if (item.action === "settings") onOpenSettings();
     else if (item.template) onSelect(item.template);
     onClose();
   };
