@@ -81,11 +81,13 @@ export function ChatInterface() {
     if (!r) return;
     signAndSend(r.tx.transactions, r.tx.token.symbol);
   };
+  const crossChainComingSoon = () => addBotMessage("🚧 Cross-chain send is coming soon!");
 
   // Main chat — wallet connection and access gating removed for now
   // (design-focused phase; BlockRadar wallet integration lands later).
   return (
     <div className="relative flex-1 flex flex-col overflow-hidden bg-cowry-dark">
+      <div className="absolute inset-0 bg-glow-green pointer-events-none" />
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 lg:px-10 py-3 lg:py-4 bg-cowry-dark border-b border-cowry-border flex-shrink-0">
@@ -120,18 +122,21 @@ export function ChatInterface() {
           </button>
 
           <button
-            onClick={() => setShowCrossChainSend(true)}
+            onClick={crossChainComingSoon}
             className="lg:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
-            title="Send USDC from Celo to another chain"
+            title="Cross-chain send (coming soon)"
           >
             <Image src="/Vector%202.png" alt="Send" width={18} height={18} />
           </button>
           <button
-            onClick={() => setShowCrossChainSend(true)}
+            onClick={crossChainComingSoon}
             className="hidden lg:flex items-center gap-2 text-sm font-medium text-white border border-cowry-border rounded-full pl-4 pr-3 py-1.5 hover:border-cowry-green/40 transition-colors"
           >
             Cross-chain send
             <Image src="/Vector%202.png" alt="" width={16} height={16} />
+            <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-cowry-border text-cowry-muted">
+              Soon
+            </span>
           </button>
 
           <button
@@ -153,7 +158,7 @@ export function ChatInterface() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 lg:px-10 py-4 bg-cowry-darker">
+      <div className="relative flex-1 min-h-0 overflow-y-auto px-3 lg:px-10 py-4">
        <div className="space-y-2 lg:max-w-3xl lg:mx-auto">
         {messages.length === 0 && (
           <div className="flex flex-col items-center gap-3 pt-16 sm:pt-24">
@@ -163,7 +168,7 @@ export function ChatInterface() {
                   key={s.text}
                   onClick={() => {
                     if (s.kind === "action") {
-                      if (s.action === "cross-chain") setShowCrossChainSend(true);
+                      if (s.action === "cross-chain") crossChainComingSoon();
                       else if (s.action === "tx-history") setShowTxHistory(true);
                     } else {
                       setInput(s.text);
@@ -176,6 +181,11 @@ export function ChatInterface() {
                     <Image src={s.icon} alt="" width={16} height={16} />
                   </span>
                   {s.text}
+                  {s.kind === "action" && s.action === "cross-chain" && (
+                    <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-cowry-border text-cowry-muted">
+                      Soon
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -217,7 +227,7 @@ export function ChatInterface() {
        </div>
       </div>
 
-      <div className="bg-cowry-dark border-t border-cowry-border px-3 lg:px-10 py-3 flex items-center gap-2 flex-shrink-0">
+      <div className="relative z-[60] bg-cowry-dark border-t border-cowry-border px-3 lg:px-10 py-3 flex items-center gap-2 flex-shrink-0">
         <button
           onClick={() => setShowCommands((v) => !v)}
           disabled={isRecording}
@@ -319,7 +329,7 @@ export function ChatInterface() {
             setInput(template);
             setTimeout(() => inputRef.current?.focus(), 50);
           }}
-          onOpenCrossChain={() => { setShowCommands(false); setShowCrossChainSend(true); }}
+          onOpenCrossChain={() => { setShowCommands(false); crossChainComingSoon(); }}
           onOpenTxHistory={() => { setShowCommands(false); setShowTxHistory(true); }}
           onOpenSettings={() => { setShowCommands(false); setShowSettings(true); }}
           onClose={() => setShowCommands(false)}

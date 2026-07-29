@@ -108,12 +108,12 @@ export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpe
   return (
     /* Backdrop */
     <div
-      className="absolute inset-0 z-50 flex flex-col justify-end bg-black/90 backdrop-blur-sm"
+      className="absolute inset-0 z-50 flex flex-col justify-end lg:items-start bg-black/50 backdrop-blur-xl"
       onClick={onClose}
     >
-      {/* Sheet */}
+      {/* Sheet (mobile) / floating popover (desktop) */}
       <div
-        className="relative bg-cowry-dark border-t border-cowry-border rounded-t-3xl overflow-hidden max-h-[80vh] flex flex-col"
+        className="relative bg-cowry-dark border-t lg:border border-cowry-border rounded-t-3xl lg:rounded-3xl overflow-hidden max-h-[80vh] lg:max-h-[75vh] lg:w-96 flex flex-col lg:ml-10 lg:mb-24 lg:shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="absolute inset-x-0 top-0 h-40 bg-glow-green pointer-events-none" />
@@ -149,7 +149,14 @@ export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpe
               >
                 <span className="flex-shrink-0">{item.icon}</span>
                 <span>
-                  <p className="text-sm font-bold text-white">{item.label}</p>
+                  <p className="text-sm font-bold text-white flex items-center gap-1.5">
+                    {item.label}
+                    {item.action === "cross-chain" && (
+                      <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-cowry-border text-cowry-muted">
+                        Soon
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-cowry-muted">{item.desc}</p>
                 </span>
               </button>
