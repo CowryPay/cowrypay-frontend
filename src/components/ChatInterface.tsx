@@ -1,8 +1,9 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link  from "next/link";
-import { useWallet }          from "@/hooks/useWallet";
+import { useAuth }            from "@/hooks/useAuth";
+import { getChatWelcome }     from "@/lib/backendApi";
 import { useChat }            from "@/hooks/useChat";
 import { useVoiceRecorder }   from "@/hooks/useVoiceRecorder";
 import { transcribeAudio }    from "@/lib/agent";
@@ -32,10 +33,30 @@ const SUGGESTIONS: Suggestion[] = [
 ];
 
 export function ChatInterface() {
-  const { address, shortAddress, ensureCelo, wrongChain } = useWallet();
+  const { user, wallet, address, shortAddress, loading: authLoading } = useAuth();
 
   const { messages, loading, txLoading, send, stop, confirm, cancel, signAndSend, addBotMessage, bottomRef } =
-    useChat(address ?? null);
+    useChat(user, wallet);
+
+  const hasGreetedRef = useRef(false);
+  useEffect(() => {
+    if (authLoading || hasGreetedRef.current || !user || !wallet) return;
+    hasGreetedRef.current = true;
+    void getChatWelcome()
+      .then(({ reply }) => {
+        // Drop the plain-text address paragraph — DepositAddressCard renders it instead.
+        const prose = reply
+          .split("\n\n")
+          .filter((para) => !para.includes(wallet.address))
+          .join("\n\n");
+        addBotMessage(prose, { depositAddress: wallet.address, depositChain: wallet.chain });
+      })
+      .catch(() => {
+        // Best-effort greeting — the deposit address is still visible in the wallet badge.
+      });
+  }, [authLoading, user, wallet, addBotMessage]);
+
+  const hasUserMessage = messages.some((m) => m.role === "user");
 
   const [input,       setInput]       = useState("");
   const [showCrossChainSend, setShowCrossChainSend] = useState(false);
@@ -149,19 +170,10 @@ export function ChatInterface() {
         </div>
       </div>
 
-      {wrongChain && (
-        <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20 flex-shrink-0">
-          <p className="text-xs text-amber-400">Switch to Celo to send payments</p>
-          <button onClick={ensureCelo} className="text-xs font-semibold text-amber-300 hover:text-amber-100 transition-colors">
-            Switch
-          </button>
-        </div>
-      )}
-
       <div className="relative flex-1 min-h-0 overflow-y-auto px-3 lg:px-10 py-4">
        <div className="space-y-2 lg:max-w-3xl lg:mx-auto">
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center gap-3 pt-16 sm:pt-24">
+        {!hasUserMessage && (
+          <div className="flex flex-col items-center gap-3 pt-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 w-full max-w-xs lg:max-w-2xl">
               {SUGGESTIONS.map((s) => (
                 <button

@@ -2,60 +2,79 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { getErrorMessage } from "@/lib/errors";
 import { AuthField, MailIcon, LockIcon } from "@/components/auth/AuthField";
 import { AuthButton } from "@/components/auth/AuthButton";
 
 export default function SignInPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"email" | "password">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep("password");
+    setError("");
+    setLoading(true);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+      router.push("/app");
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not sign in"));
+      setLoading(false);
+    }
   };
 
-  // BlockRadar auth isn't wired up yet — stub straight into the app.
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.push("/app");
+  const handleForgotPassword = async () => {
+    if (!email || resetting) return;
+    setError("");
+    setResetting(true);
+    try {
+      const { error: otpError } = await supabase.auth.signInWithOtp({ email });
+      if (otpError) throw otpError;
+      router.push(`/verify?email=${encodeURIComponent(email)}&flow=reset`);
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not send reset code"));
+      setResetting(false);
+    }
   };
 
   return (
     <div className="flex-1 min-h-0 flex flex-col justify-center px-8 overflow-y-auto scrollbar-hide">
-      {step === "email" ? (
-        <form onSubmit={handleEmailSubmit} className="flex flex-col">
-          <h1 className="text-4xl font-black mb-10">Sign in</h1>
+      <form onSubmit={handleSubmit} className="flex flex-col">
+        <h1 className="text-4xl font-black mb-10">Sign in</h1>
 
-          <div className="mb-8">
-            <AuthField icon={<MailIcon />} label="Email" type="email" value={email} onChange={setEmail} autoFocus />
-          </div>
+        <div className="space-y-5 mb-8">
+          <AuthField icon={<MailIcon />} label="Email" type="email" value={email} onChange={setEmail} autoFocus />
+          <AuthField icon={<LockIcon />} label="Password" type="password" value={password} onChange={setPassword} />
+        </div>
 
-          <AuthButton type="submit">Log In</AuthButton>
+        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
 
-          <p className="text-center text-cowry-muted text-sm mt-4">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-cowry-green">
-              Sign Up
-            </Link>
-          </p>
-        </form>
-      ) : (
-        <form onSubmit={handlePasswordSubmit} className="flex flex-col">
-          <h1 className="text-4xl font-black mb-10">Sign in</h1>
+        <AuthButton type="submit" arrow disabled={loading || !email || !password}>
+          {loading ? "Signing in…" : "Log In"}
+        </AuthButton>
 
-          <div className="mb-8">
-            <AuthField icon={<LockIcon />} label="Password" type="password" value={password} onChange={setPassword} autoFocus />
-          </div>
+        <button
+          type="button"
+          onClick={handleForgotPassword}
+          disabled={resetting}
+          className="text-center text-cowry-muted text-sm mt-4 hover:text-white transition-colors disabled:opacity-50"
+        >
+          {resetting ? "Sending code…" : "Forgot Password?"}
+        </button>
 
-          <AuthButton type="submit" arrow>
-            Continue
-          </AuthButton>
-
-          <p className="text-center text-cowry-muted text-sm mt-4">Forgot Password?</p>
-        </form>
-      )}
+        <p className="text-center text-cowry-muted text-sm mt-4">
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="text-cowry-green">
+            Sign Up
+          </Link>
+        </p>
+      </form>
     </div>
   );
 }

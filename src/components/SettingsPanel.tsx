@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 type Tab = "payment" | "security" | "notifications";
 
@@ -66,7 +67,15 @@ function LogoutIcon() {
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const router = useRouter();
+  const { user, signOut } = useAuth();
   const [tab, setTab] = useState<Tab>("payment");
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogOut = async () => {
+    setLoggingOut(true);
+    await signOut();
+    router.push("/signin");
+  };
 
   const [aiPermissions, setAiPermissions] = useState(true);
   const [biometrics,    setBiometrics]    = useState(false);
@@ -132,7 +141,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               <div className="flex items-center justify-between gap-4 py-4 border-b border-cowry-border">
                 <div>
                   <p className="text-sm font-semibold text-white">Email</p>
-                  <p className="text-xs text-cowry-muted mt-0.5">xyz@egmail.com</p>
+                  <p className="text-xs text-cowry-muted mt-0.5">{user?.email ?? "—"}</p>
                 </div>
                 <button className="text-cowry-green hover:text-cowry-mint transition-colors p-1" title="Edit email">
                   <PencilIcon />
@@ -176,10 +185,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <div className="flex-shrink-0 px-4 lg:px-10 pb-4">
            <div className="lg:max-w-2xl">
             <button
-              onClick={() => router.push("/signin")}
-              className="w-full flex items-center justify-center gap-2 bg-cowry-card border border-cowry-border rounded-2xl py-3.5 text-sm font-semibold text-white hover:border-red-400/40 hover:text-red-400 transition-colors"
+              onClick={handleLogOut}
+              disabled={loggingOut}
+              className="w-full flex items-center justify-center gap-2 bg-cowry-card border border-cowry-border rounded-2xl py-3.5 text-sm font-semibold text-white hover:border-red-400/40 hover:text-red-400 transition-colors disabled:opacity-50"
             >
-              Log Out
+              {loggingOut ? "Logging out…" : "Log Out"}
               <LogoutIcon />
             </button>
            </div>

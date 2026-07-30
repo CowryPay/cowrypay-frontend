@@ -103,6 +103,9 @@ export type Message = {
   text: string;
   timestamp: Date;
   response?: ChatResponse;
+  /** Set only on the post-auth welcome message — renders a copyable address card. */
+  depositAddress?: string;
+  depositChain?: string;
 };
 
 // ── Bridge types ──────────────────────────────────────────────────────────────

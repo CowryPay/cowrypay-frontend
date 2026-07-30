@@ -2,18 +2,29 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AuthField, MailIcon, LockIcon } from "@/components/auth/AuthField";
+import { supabase } from "@/lib/supabase";
+import { getErrorMessage } from "@/lib/errors";
+import { AuthField, MailIcon } from "@/components/auth/AuthField";
 import { AuthButton } from "@/components/auth/AuthButton";
 
 export default function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // BlockRadar auth isn't wired up yet — stub straight into the app.
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/app");
+    setError("");
+    setLoading(true);
+    try {
+      const { error: otpError } = await supabase.auth.signInWithOtp({ email });
+      if (otpError) throw otpError;
+      router.push(`/verify?email=${encodeURIComponent(email)}&flow=signup`);
+    } catch (err) {
+      setError(getErrorMessage(err, "Could not send verification code"));
+      setLoading(false);
+    }
   };
 
   return (
@@ -23,10 +34,13 @@ export default function SignUpPage() {
 
         <div className="space-y-5 mb-8">
           <AuthField icon={<MailIcon />} label="Email" type="email" value={email} onChange={setEmail} autoFocus />
-          <AuthField icon={<LockIcon />} label="Password" type="password" value={password} onChange={setPassword} />
         </div>
 
-        <AuthButton type="submit">Sign Up</AuthButton>
+        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+
+        <AuthButton type="submit" disabled={loading || !email}>
+          {loading ? "Sending code…" : "Sign Up"}
+        </AuthButton>
 
         <p className="text-center text-cowry-muted text-sm mt-4">
           Already have an account?{" "}

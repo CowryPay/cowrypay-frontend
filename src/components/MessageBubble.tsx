@@ -4,6 +4,7 @@ import { TransactionCard } from "./TransactionCard";
 import { TxHistoryCard } from "./TxHistoryCard";
 import { RemittanceQuoteCard } from "./RemittanceQuoteCard";
 import { OnRampCard } from "./OnRampCard";
+import { DepositAddressCard } from "./DepositAddressCard";
 
 interface Props {
   message:    Message;
@@ -32,11 +33,18 @@ export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove,
           className={`px-4 py-3 rounded-[22px] text-sm whitespace-pre-wrap leading-relaxed ${
             isUser
               ? "bg-cowry-green text-white font-medium"
-              : "bg-[#141C16] border border-cowry-green/10 text-white"
+              : message.depositAddress
+                ? "bg-cowry-card border border-cowry-green/30 text-white"
+                : "bg-[#141C16] border border-cowry-green/10 text-white"
           }`}
         >
           {message.text}
         </div>
+
+        {/* Deposit address — its own card, sits below the welcome text */}
+        {message.depositAddress && (
+          <DepositAddressCard address={message.depositAddress} chain={message.depositChain ?? "Celo"} />
+        )}
 
         {/* Approve button */}
         {r?.type === "clarify" && r.transactions && r.transactions.length > 0 && onApprove && (
