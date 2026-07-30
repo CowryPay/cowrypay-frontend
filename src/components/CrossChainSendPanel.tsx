@@ -269,7 +269,7 @@ export function CrossChainSendPanel({ walletAddress, onClose, onSuccess }: Props
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-cowry-darker flex flex-col">
+    <div className="absolute inset-0 z-[65] bg-cowry-darker flex flex-col">
       <div className="flex flex-col h-full">
         <div className="flex-shrink-0 px-4 py-4 border-b border-cowry-border flex items-center gap-3">
           <button

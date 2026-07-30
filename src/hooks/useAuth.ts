@@ -59,5 +59,7 @@ export function useAuth() {
     shortAddress: wallet ? shorten(wallet.address) : null,
     isAuthenticated: !!user,
     signOut,
+    /** Re-fetch user/wallet — call after a mutation like setting the PIN. */
+    refresh,
   };
 }

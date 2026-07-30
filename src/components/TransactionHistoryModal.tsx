@@ -51,15 +51,15 @@ export function TransactionHistoryModal({ walletAddress, onClose }: Props) {
 
   return (
     <div
-      className="absolute inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm"
+      className="absolute inset-0 z-[65] flex flex-col justify-end lg:items-center lg:justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-cowry-dark border-t border-cowry-border rounded-t-3xl overflow-hidden max-h-[88vh] flex flex-col"
+        className="bg-cowry-dark border-t lg:border border-cowry-border rounded-t-3xl lg:rounded-3xl overflow-hidden max-h-[88vh] lg:max-h-[80vh] lg:max-w-lg lg:w-full lg:mx-4 lg:shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-shrink-0 px-4 pt-3 pb-3 border-b border-cowry-border">
-          <div className="w-10 h-1 bg-cowry-border rounded-full mx-auto mb-3" />
+          <div className="w-10 h-1 bg-cowry-border rounded-full mx-auto mb-3 lg:hidden" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-lg">📋</span>

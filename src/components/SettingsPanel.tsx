@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { SetPinModal } from "./SetPinModal";
 
 type Tab = "payment" | "security" | "notifications";
 
@@ -67,9 +68,10 @@ function LogoutIcon() {
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, signOut, refresh } = useAuth();
   const [tab, setTab] = useState<Tab>("payment");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showSetPin, setShowSetPin] = useState(false);
 
   const handleLogOut = async () => {
     setLoggingOut(true);
@@ -84,7 +86,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [promotions,  setPromotions]  = useState(true);
 
   return (
-    <div className="absolute inset-0 z-50 bg-cowry-dark flex flex-col">
+    <div className="absolute inset-0 z-[65] bg-cowry-dark flex flex-col">
       <div className="absolute inset-0 bg-glow-green pointer-events-none" />
 
       <div className="relative flex flex-col h-full w-full overflow-x-hidden">
@@ -121,7 +123,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         {/* Content */}
         <div className="overflow-y-auto overflow-x-hidden flex-1 px-4 lg:px-10 py-4">
-          <div className="lg:max-w-2xl">
+          <div className="lg:max-w-2xl lg:mx-auto">
           {tab === "payment" && (
             <div>
               <p className="text-xs font-semibold text-cowry-muted uppercase tracking-widest mb-1">
@@ -145,6 +147,20 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </div>
                 <button className="text-cowry-green hover:text-cowry-mint transition-colors p-1" title="Edit email">
                   <PencilIcon />
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-4 border-b border-cowry-border">
+                <div>
+                  <p className="text-sm font-semibold text-white">Transaction PIN</p>
+                  <p className="text-xs text-cowry-muted mt-0.5">
+                    {user?.pinSet ? "PIN is set" : "Required before you can send money"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowSetPin(true)}
+                  className="text-xs font-semibold text-cowry-green hover:text-cowry-mint transition-colors border border-cowry-green/40 hover:border-cowry-green rounded-full px-3 py-1.5"
+                >
+                  {user?.pinSet ? "Change" : "Set PIN"}
                 </button>
               </div>
               <SettingRow
@@ -183,7 +199,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         {tab === "security" && (
           <div className="flex-shrink-0 px-4 lg:px-10 pb-4">
-           <div className="lg:max-w-2xl">
+           <div className="lg:max-w-2xl lg:mx-auto">
             <button
               onClick={handleLogOut}
               disabled={loggingOut}
@@ -196,6 +212,17 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </div>
         )}
       </div>
+
+      {showSetPin && (
+        <SetPinModal
+          email={user?.email ?? null}
+          onClose={() => setShowSetPin(false)}
+          onDone={() => {
+            setShowSetPin(false);
+            void refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

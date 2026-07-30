@@ -33,6 +33,13 @@ type PendingSend =
   | { step: "need_institution"; amount: string; country: CountryInfo; institutions: Institution[] }
   | { step: "need_account"; amount: string; country: CountryInfo; institution: Institution }
   | {
+      step: "need_amount_retry";
+      country: CountryInfo;
+      institution: Institution;
+      accountIdentifier: string;
+      accountName: string;
+    }
+  | {
       step: "need_confirm";
       amount: string;
       country: CountryInfo;
@@ -46,7 +53,7 @@ type PendingSend =
 function sendGateMessage(user: PublicUser | null): string | null {
   if (!user) return "You'll need to be signed in to send money.";
   if (!user.pinSet) {
-    return "You'll need to set a transaction PIN before sending money — that's coming soon. In the meantime, ask me about your balance or deposit address.";
+    return "You'll need to set a transaction PIN before sending money. Tap the ⚙️ Settings icon (top right) → Security & Privacy → Set PIN, then come back and try again.";
   }
   return null;
 }
@@ -147,6 +154,59 @@ export function useChat(user: PublicUser | null, wallet: Wallet | null) {
     [addMessage],
   );
 
+  /** Fetches a rate quote for an already-verified recipient and shows the confirm card. */
+  const tryQuoteRate = useCallback(
+    async (
+      amount: string,
+      country: CountryInfo,
+      institution: Institution,
+      accountIdentifier: string,
+      accountName: string,
+    ) => {
+      try {
+        const { rate } = await getOfframpRate({
+          network:      wallet!.chain,
+          token:        "USDC",
+          amount,
+          fiatCurrency: country.currencyCode,
+        });
+        pendingSendRef.current = {
+          step: "need_confirm",
+          amount,
+          country,
+          institution,
+          accountIdentifier,
+          accountName,
+          rate,
+        };
+        const receiveAmount = (parseFloat(amount) * parseFloat(rate)).toFixed(2);
+        addMessage({
+          role: "bot",
+          text: "Confirm this transfer:",
+          response: {
+            type: "remittance_quote",
+            preview: "Confirm this transfer",
+            recipientLabel: `${accountName} — ${institution.name}`,
+            sendAmount: amount,
+            sendToken: "USDC",
+            receiveAmount,
+            receiveCurrency: country.currencyCode,
+            rateLabel: `1 USDC ≈ ${rate} ${country.currencyCode}`,
+            feeLabel: "",
+          },
+        });
+      } catch (e) {
+        // Recipient is already verified — don't make them re-enter it, just ask for a different amount.
+        pendingSendRef.current = { step: "need_amount_retry", country, institution, accountIdentifier, accountName };
+        addMessage({
+          role: "bot",
+          text: `⚠️ Couldn't get a rate for that amount: ${e instanceof Error ? e.message : "unknown error"}. Try a different amount, or type "cancel" to stop.`,
+        });
+      }
+    },
+    [addMessage, wallet],
+  );
+
   /**
    * Client-orchestrated off-ramp send flow — the real backend's chat intent
    * classifier doesn't know about "send" yet, so this lives entirely here.
@@ -232,37 +292,7 @@ export function useChat(user: PublicUser | null, wallet: Wallet | null) {
               institution: pending.institution.code,
               accountIdentifier,
             });
-            const { rate } = await getOfframpRate({
-              network:      wallet!.chain,
-              token:        "USDC",
-              amount:       pending.amount,
-              fiatCurrency: pending.country.currencyCode,
-            });
-            pendingSendRef.current = {
-              step: "need_confirm",
-              amount: pending.amount,
-              country: pending.country,
-              institution: pending.institution,
-              accountIdentifier,
-              accountName,
-              rate,
-            };
-            const receiveAmount = (parseFloat(pending.amount) * parseFloat(rate)).toFixed(2);
-            addMessage({
-              role: "bot",
-              text: "Confirm this transfer:",
-              response: {
-                type: "remittance_quote",
-                preview: "Confirm this transfer",
-                recipientLabel: `${accountName} — ${pending.institution.name}`,
-                sendAmount: pending.amount,
-                sendToken: "USDC",
-                receiveAmount,
-                receiveCurrency: pending.country.currencyCode,
-                rateLabel: `1 USDC ≈ ${rate} ${pending.country.currencyCode}`,
-                feeLabel: "",
-              },
-            });
+            await tryQuoteRate(pending.amount, pending.country, pending.institution, accountIdentifier, accountName);
           } catch (e) {
             pendingSendRef.current = null;
             addMessage({
@@ -273,13 +303,23 @@ export function useChat(user: PublicUser | null, wallet: Wallet | null) {
           return true;
         }
 
+        case "need_amount_retry": {
+          const m = AMOUNT_RE.exec(text);
+          if (!m) {
+            addMessage({ role: "bot", text: "How much would you like to send instead?" });
+            return true;
+          }
+          await tryQuoteRate(m[1]!, pending.country, pending.institution, pending.accountIdentifier, pending.accountName);
+          return true;
+        }
+
         case "need_confirm": {
           addMessage({ role: "bot", text: `Tap Confirm or Cancel on the card above, or type "cancel" to stop.` });
           return true;
         }
       }
     },
-    [addMessage, user, wallet, advanceSendFlow],
+    [addMessage, user, wallet, advanceSendFlow, tryQuoteRate],
   );
 
   const fetchAgentResponse = useCallback(async (text: string, signal?: AbortSignal): Promise<ChatResponse> => {

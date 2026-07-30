@@ -82,6 +82,15 @@ export function sendChatMessage(message: string, signal?: AbortSignal): Promise<
   return authedFetch("/chat", { method: "POST", body: JSON.stringify({ message }), signal });
 }
 
+/**
+ * Sets/changes the transaction PIN. Requires a session from a genuinely
+ * fresh login (Supabase email-OTP verified in the last 10 min) — the caller
+ * must re-verify OTP right before this or the backend 401s with `reauth_required`.
+ */
+export function setTransactionPin(pin: string): Promise<{ ok: boolean }> {
+  return authedFetch("/auth/pin", { method: "POST", body: JSON.stringify({ pin }) });
+}
+
 // ── Off-ramp (crypto → fiat send via Paycrest) ──────────────────────────────
 
 export type Institution = { name: string; code: string; type: string };

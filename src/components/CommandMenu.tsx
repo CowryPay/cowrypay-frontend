@@ -108,7 +108,7 @@ export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpe
   return (
     /* Backdrop */
     <div
-      className="absolute inset-0 z-50 flex flex-col justify-end lg:items-start bg-black/50 backdrop-blur-xl"
+      className="absolute inset-0 z-[65] flex flex-col justify-end lg:items-start bg-black/50 backdrop-blur-xl"
       onClick={onClose}
     >
       {/* Sheet (mobile) / floating popover (desktop) */}
