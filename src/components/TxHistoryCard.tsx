@@ -20,8 +20,8 @@ export function TxHistoryCard({ items, onViewAll }: Props) {
 
       {/* List */}
       <div className="divide-y divide-cowry-border">
-        {items.map((tx, i) => (
-          <TxHistoryRow key={`${tx.hash}-${i}`} tx={tx} />
+        {items.map((tx) => (
+          <TxHistoryRow key={tx.id} tx={tx} />
         ))}
       </div>
 

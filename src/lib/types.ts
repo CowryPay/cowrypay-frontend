@@ -80,19 +80,19 @@ export type ChatResponse =
       orderId: string;
     };
 
+/** A merged, display-ready entry from either a send or a deposit — powers Transaction History. */
 export type TxHistoryItem = {
-  hash: string;
+  id: string;
   direction: "sent" | "received";
   amount: string;
-  token: "USDC" | "USDm" | "USDT";
+  tokenSymbol: string;
+  /** Recipient name for a send, or the chain name for a deposit. */
   counterparty: string;
-  explorerUrl: string;
+  stateLabel: string;
+  stateClassName: string;
+  txHash: string | null;
+  explorerUrl: string | null;
   timestamp: string;
-};
-
-export type TxHistoryPage = {
-  items: TxHistoryItem[];
-  hasMore: boolean;
 };
 
 // ── UI message model ──────────────────────────────────────────────────────────

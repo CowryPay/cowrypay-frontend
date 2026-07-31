@@ -4,6 +4,7 @@ import { resetSession } from "@/lib/agent";
 import {
   sendChatMessage,
   createOfframpSend,
+  saveRecipient,
   type PublicUser,
   type RemittanceDraft,
 } from "@/lib/backendApi";
@@ -32,6 +33,14 @@ export function useChat(user: PublicUser | null) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSendRef = useRef<RemittanceDraft | null>(null);
+  /** Set right after a send completes — the next message is read as a nickname (or "skip"), not a normal chat message. */
+  const pendingSaveRecipientRef = useRef<{
+    institution: string;
+    institutionName: string;
+    accountIdentifier: string;
+    accountName: string;
+    fiatCurrency: string;
+  } | null>(null);
 
   const getSessionId = useCallback(() => sessionIdRef.current, []);
 
@@ -39,6 +48,7 @@ export function useChat(user: PublicUser | null) {
   const resetSessionState = useCallback(async () => {
     const oldSessionId = sessionIdRef.current;
     sessionIdRef.current = newSessionId();
+    pendingSaveRecipientRef.current = null;
     try {
       await resetSession(oldSessionId);
     } catch {
@@ -122,6 +132,37 @@ export function useChat(user: PublicUser | null) {
 
       scheduleIdleReset();
       addMessage({ role: "user", text });
+
+      // The previous bot message asked "save this recipient?" — this reply is
+      // the nickname (or a skip), not a normal message for the chat backend.
+      if (pendingSaveRecipientRef.current) {
+        const pending = pendingSaveRecipientRef.current;
+        pendingSaveRecipientRef.current = null;
+        const trimmed = text.trim();
+
+        if (/^(skip|no|nope|cancel|nah)$/i.test(trimmed)) {
+          addMessage({ role: "bot", text: "No problem — not saved." });
+          return;
+        }
+
+        setLoading(true);
+        try {
+          await saveRecipient({ nickname: trimmed, ...pending });
+          addMessage({
+            role: "bot",
+            text: `Saved! Next time just say "send $20 to ${trimmed}" and I'll use these details.`,
+          });
+        } catch (e) {
+          addMessage({
+            role: "bot",
+            text: `⚠️ Couldn't save that recipient: ${e instanceof Error ? e.message : "unknown error"}`,
+          });
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
       setLoading(true);
 
       const controller = new AbortController();
@@ -228,6 +269,21 @@ export function useChat(user: PublicUser | null) {
           text:
             `✅ Send created — order #${result.send.id.slice(0, 8)}.\n\n` +
             `The payout is on its way to your recipient. I'll update you here once it settles.`,
+        });
+
+        pendingSaveRecipientRef.current = {
+          institution:       draft.recipient.institution,
+          institutionName:   draft.recipient.institutionName ?? draft.recipient.institution,
+          accountIdentifier: draft.recipient.accountIdentifier,
+          accountName:       draft.recipient.accountName,
+          fiatCurrency:      draft.fiatCurrency,
+        };
+        addMessage({
+          role: "bot",
+          text:
+            `💾 Save ${draft.recipient.accountName}` +
+            `${draft.recipient.institutionName ? ` (${draft.recipient.institutionName})` : ""} as a recipient?\n\n` +
+            `Reply with a nickname (e.g. "mom"), or say "skip".`,
         });
       } catch (e) {
         // The quote/draft stays live (not cleared) so Confirm can be tapped again to retry.

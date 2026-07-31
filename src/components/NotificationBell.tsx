@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useDepositNotifications } from "@/hooks/useDepositNotifications";
-import type { Deposit, DepositState } from "@/lib/backendApi";
+import type { Deposit } from "@/lib/backendApi";
 import { formatToken } from "@/lib/currency";
+import { describeDepositState } from "@/lib/txState";
 
 function BellIcon() {
   return (
@@ -13,23 +14,8 @@ function BellIcon() {
   );
 }
 
-function describeState(state: DepositState): { label: string; className: string } {
-  switch (state) {
-    case "BALANCE_CREDITED":
-      return { label: "Credited", className: "text-cowry-green bg-cowry-green/10 border-cowry-green/40" };
-    case "MANUAL_REVIEW":
-      return { label: "Under review", className: "text-amber-400 bg-amber-500/10 border-amber-500/30" };
-    case "DEPOSIT_HELD":
-      return { label: "Held", className: "text-red-400 bg-red-500/10 border-red-500/30" };
-    case "RETURN_TO_SENDER":
-      return { label: "Returned", className: "text-red-400 bg-red-500/10 border-red-500/30" };
-    default:
-      return { label: "Processing", className: "text-amber-400 bg-amber-500/10 border-amber-500/30" };
-  }
-}
-
 function DepositRow({ deposit }: { deposit: Deposit }) {
-  const { label, className } = describeState(deposit.state);
+  const { label, className } = describeDepositState(deposit.state);
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-cowry-border last:border-b-0">
       <div>

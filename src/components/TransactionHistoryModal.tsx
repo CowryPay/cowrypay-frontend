@@ -1,20 +1,67 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getTxHistory } from "@/lib/agent";
+import { getSends, getDeposits } from "@/lib/backendApi";
+import { describeSendState, describeDepositState } from "@/lib/txState";
 import type { TxHistoryItem } from "@/lib/types";
 import { TxHistoryRow } from "./TxHistoryRow";
 
 interface Props {
-  walletAddress: string;
   onClose: () => void;
 }
 
-export function TransactionHistoryModal({ walletAddress, onClose }: Props) {
+function explorerUrl(txHash: string | null): string | null {
+  return txHash ? `https://celoscan.io/tx/${txHash}` : null;
+}
+
+function recipientLabel(recipient: { accountName: string; institutionName?: string }): string {
+  return recipient.institutionName
+    ? `${recipient.accountName} (${recipient.institutionName})`
+    : recipient.accountName;
+}
+
+async function loadHistory(): Promise<TxHistoryItem[]> {
+  const [{ sends }, { deposits }] = await Promise.all([getSends(), getDeposits()]);
+
+  const sendItems: TxHistoryItem[] = sends.map((s) => {
+    const { label, className } = describeSendState(s.state);
+    return {
+      id: s.id,
+      direction: "sent",
+      amount: s.amountHuman,
+      tokenSymbol: s.tokenSymbol,
+      counterparty: recipientLabel(s.recipient),
+      stateLabel: label,
+      stateClassName: className,
+      txHash: s.withdrawTxHash,
+      explorerUrl: explorerUrl(s.withdrawTxHash),
+      timestamp: s.createdAt,
+    };
+  });
+
+  const depositItems: TxHistoryItem[] = deposits.map((d) => {
+    const { label, className } = describeDepositState(d.state);
+    return {
+      id: d.id,
+      direction: "received",
+      amount: d.amount,
+      tokenSymbol: d.tokenSymbol,
+      counterparty: d.chain,
+      stateLabel: label,
+      stateClassName: className,
+      txHash: d.txHash,
+      explorerUrl: explorerUrl(d.txHash),
+      timestamp: d.createdAt,
+    };
+  });
+
+  return [...sendItems, ...depositItems].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+}
+
+export function TransactionHistoryModal({ onClose }: Props) {
   const [items, setItems] = useState<TxHistoryItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -26,28 +73,11 @@ export function TransactionHistoryModal({ walletAddress, onClose }: Props) {
   useEffect(() => {
     setLoading(true);
     setError("");
-    getTxHistory(walletAddress, 1)
-      .then((res) => {
-        setItems(res.items);
-        setHasMore(res.hasMore);
-        setPage(1);
-      })
+    loadHistory()
+      .then(setItems)
       .catch((e) => setError(e instanceof Error ? e.message : "Could not load transactions"))
       .finally(() => setLoading(false));
-  }, [walletAddress]);
-
-  const loadMore = () => {
-    const nextPage = page + 1;
-    setLoadingMore(true);
-    getTxHistory(walletAddress, nextPage)
-      .then((res) => {
-        setItems((prev) => [...prev, ...res.items]);
-        setHasMore(res.hasMore);
-        setPage(nextPage);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "Could not load more transactions"))
-      .finally(() => setLoadingMore(false));
-  };
+  }, []);
 
   return (
     <div
@@ -88,28 +118,14 @@ export function TransactionHistoryModal({ walletAddress, onClose }: Props) {
             </div>
           ) : items.length === 0 && !error ? (
             <p className="text-sm text-cowry-muted text-center py-16">
-              No USDC, USDm or USDT transactions found for your wallet.
+              No sends or deposits yet.
             </p>
           ) : (
-            <>
-              <div className="divide-y divide-cowry-border">
-                {items.map((tx, i) => (
-                  <TxHistoryRow key={`${tx.hash}-${i}`} tx={tx} showDate />
-                ))}
-              </div>
-
-              {hasMore && (
-                <div className="px-4 py-4 flex justify-center">
-                  <button
-                    onClick={loadMore}
-                    disabled={loadingMore}
-                    className="text-xs font-semibold text-cowry-green border border-cowry-green/40 hover:border-cowry-green rounded-full px-5 py-2 transition-colors disabled:opacity-50"
-                  >
-                    {loadingMore ? "Loading…" : "Load more"}
-                  </button>
-                </div>
-              )}
-            </>
+            <div className="divide-y divide-cowry-border">
+              {items.map((tx) => (
+                <TxHistoryRow key={tx.id} tx={tx} showDate />
+              ))}
+            </div>
           )}
         </div>
       </div>

@@ -158,7 +158,7 @@ export function ChatInterface() {
 
           <button
             onClick={() => setShowTxHistory(true)}
-            className="hidden lg:flex w-8 h-8 items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
+            className="flex w-8 h-8 items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
             title="Transaction history"
           >
             <Image src="/history.png" alt="" width={20} height={20} />
@@ -370,11 +370,8 @@ export function ChatInterface() {
         />
       )}
 
-      {showTxHistory && address && (
-        <TransactionHistoryModal
-          walletAddress={address}
-          onClose={() => setShowTxHistory(false)}
-        />
+      {showTxHistory && (
+        <TransactionHistoryModal onClose={() => setShowTxHistory(false)} />
       )}
 
       {showSettings && (

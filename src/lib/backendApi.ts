@@ -94,6 +94,37 @@ export function getDeposits(): Promise<{ deposits: Deposit[] }> {
   return authedFetch("/deposits");
 }
 
+export type SendState =
+  | "SEND_INSTRUCTED"
+  | "COMPLIANCE_SCREENING"
+  | "MANUAL_REVIEW"
+  | "SEND_REJECTED"
+  | "ORDER_CREATED"
+  | "PAYOUT_INITIATED"
+  | "SETTLING"
+  | "COMPLETE"
+  | "FAILED"
+  | "REFUNDED";
+
+export type Send = {
+  id:             string;
+  tokenSymbol:    string;
+  chain:          string;
+  amountHuman:    string;
+  fiatCurrency:   string;
+  recipient:      OfframpSendRecipient;
+  feeAmount:      string | null;
+  withdrawTxHash: string | null;
+  state:          SendState;
+  createdAt:      string;
+  updatedAt:      string;
+};
+
+/** Recent off-ramp sends for the signed-in user, newest first — powers Transaction History. */
+export function getSends(): Promise<{ sends: Send[] }> {
+  return authedFetch("/offramp/sends");
+}
+
 export type OfframpSendRecipient = {
   institution:       string;
   /** Human-readable label for `institution` (e.g. "OPay") — the code alone isn't fit to show a user. */
@@ -102,6 +133,33 @@ export type OfframpSendRecipient = {
   accountName:       string;
   memo?:             string;
 };
+
+export type SavedRecipient = {
+  id:                      string;
+  nickname:                string;
+  institutionName:         string;
+  accountName:             string;
+  /** Last 4 digits only — the backend never returns a saved account number in full. */
+  accountIdentifierMasked: string;
+  fiatCurrency:            string;
+  createdAt:               string;
+};
+
+/**
+ * Saves a recipient for reuse — once saved, the chat LLM can resolve
+ * "send $20 to <nickname>" directly without re-asking for bank/account
+ * details. Upserts on nickname, so saving an existing one just updates it.
+ */
+export function saveRecipient(input: {
+  nickname:          string;
+  institution:       string;
+  institutionName:   string;
+  accountIdentifier: string;
+  accountName:       string;
+  fiatCurrency:      string;
+}): Promise<{ recipient: SavedRecipient }> {
+  return authedFetch("/recipients", { method: "POST", body: JSON.stringify(input) });
+}
 
 /**
  * A fully-resolved send the chat LLM already built: recipient verified, a
