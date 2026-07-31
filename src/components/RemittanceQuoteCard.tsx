@@ -1,6 +1,8 @@
 "use client";
+import { formatFiat } from "@/lib/currency";
 
 type Props = {
+  description?:    string;
   recipientLabel:  string;
   sendAmount:      string;
   sendToken:       "USDC" | "USDT";
@@ -13,6 +15,7 @@ type Props = {
 };
 
 export function RemittanceQuoteCard({
+  description,
   recipientLabel,
   sendAmount,
   sendToken,
@@ -23,6 +26,10 @@ export function RemittanceQuoteCard({
 }: Props) {
   return (
     <div className="w-full bg-cowry-dark border border-cowry-border rounded-2xl px-5 py-5">
+
+      {description && (
+        <p className="text-sm text-white whitespace-pre-wrap leading-relaxed mb-5">{description}</p>
+      )}
 
       {/* Header row */}
       <div className="flex items-center justify-between mb-5">
@@ -42,7 +49,7 @@ export function RemittanceQuoteCard({
         </div>
         <div className="text-right">
           <p className="text-xs text-cowry-muted mb-1">Recipient gets</p>
-          <p className="text-lg font-bold text-white">{receiveAmount} {receiveCurrency}</p>
+          <p className="text-lg font-bold text-white">{formatFiat(receiveAmount, receiveCurrency)}</p>
         </div>
       </div>
 

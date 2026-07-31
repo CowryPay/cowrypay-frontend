@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link  from "next/link";
+import { useRouter }          from "next/navigation";
 import { useAuth }            from "@/hooks/useAuth";
 import { getChatWelcome }     from "@/lib/backendApi";
 import { useChat }            from "@/hooks/useChat";
@@ -12,6 +13,8 @@ import { CrossChainSendPanel } from "./CrossChainSendPanel";
 import { CommandMenu }        from "./CommandMenu";
 import { TransactionHistoryModal } from "./TransactionHistoryModal";
 import { SettingsPanel }      from "./SettingsPanel";
+import { VerifyPinModal }     from "./VerifyPinModal";
+import { NotificationBell }   from "./NotificationBell";
 import type { Message }       from "@/lib/types";
 
 function formatDuration(totalSec: number): string {
@@ -33,10 +36,19 @@ const SUGGESTIONS: Suggestion[] = [
 ];
 
 export function ChatInterface() {
+  const router = useRouter();
   const { user, wallet, address, shortAddress, loading: authLoading } = useAuth();
 
-  const { messages, loading, txLoading, send, stop, confirm, cancel, signAndSend, addBotMessage, bottomRef } =
-    useChat(user, wallet);
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/signin");
+    }
+  }, [authLoading, user, router]);
+
+  const {
+    messages, loading, txLoading, send, stop, confirm, cancel, signAndSend, addBotMessage, bottomRef,
+    pinVerifyOpen, closePinVerify, onPinVerified,
+  } = useChat(user);
 
   const hasGreetedRef = useRef(false);
   useEffect(() => {
@@ -104,8 +116,16 @@ export function ChatInterface() {
   };
   const crossChainComingSoon = () => addBotMessage("🚧 Cross-chain send is coming soon!");
 
-  // Main chat — wallet connection and access gating removed for now
-  // (design-focused phase; BlockRadar wallet integration lands later).
+  // Not signed in — redirecting to /signin (see the effect above). Show a
+  // blank loading state instead of flashing broken chat while that happens.
+  if (authLoading || !user) {
+    return (
+      <div className="relative flex-1 flex items-center justify-center bg-cowry-dark">
+        <div className="w-6 h-6 border-2 border-cowry-green/30 border-t-cowry-green rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex-1 flex flex-col overflow-hidden bg-cowry-dark">
       <div className="absolute inset-0 bg-glow-green pointer-events-none" />
@@ -134,6 +154,8 @@ export function ChatInterface() {
         </button>
 
         <div className="flex items-center gap-1.5 lg:gap-3">
+          <NotificationBell userId={user.id} />
+
           <button
             onClick={() => setShowTxHistory(true)}
             className="hidden lg:flex w-8 h-8 items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
@@ -357,6 +379,10 @@ export function ChatInterface() {
 
       {showSettings && (
         <SettingsPanel onClose={() => setShowSettings(false)} />
+      )}
+
+      {pinVerifyOpen && (
+        <VerifyPinModal onClose={closePinVerify} onVerified={onPinVerified} />
       )}
     </div>
   );

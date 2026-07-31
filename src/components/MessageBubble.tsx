@@ -28,18 +28,20 @@ export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove,
 
       <div className={`max-w-[82%] flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
 
-        {/* Bubble */}
-        <div
-          className={`px-4 py-3 rounded-[22px] text-sm whitespace-pre-wrap leading-relaxed ${
-            isUser
-              ? "bg-cowry-green text-white font-medium"
-              : message.depositAddress
-                ? "bg-cowry-card border border-cowry-green/30 text-white"
-                : "bg-[#141C16] border border-cowry-green/10 text-white"
-          }`}
-        >
-          {message.text}
-        </div>
+        {/* Bubble — remittance quotes fold this text into the card below instead */}
+        {r?.type !== "remittance_quote" && (
+          <div
+            className={`px-4 py-3 rounded-[22px] text-sm whitespace-pre-wrap leading-relaxed ${
+              isUser
+                ? "bg-cowry-green text-white font-medium"
+                : message.depositAddress
+                  ? "bg-cowry-card border border-cowry-green/30 text-white"
+                  : "bg-[#141C16] border border-cowry-green/10 text-white"
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
 
         {/* Deposit address — its own card, sits below the welcome text */}
         {message.depositAddress && (
@@ -121,6 +123,7 @@ export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove,
         {/* Cross-border remittance quote */}
         {r?.type === "remittance_quote" && (
           <RemittanceQuoteCard
+            description={message.text}
             recipientLabel={r.recipientLabel}
             sendAmount={r.sendAmount}
             sendToken={r.sendToken}
