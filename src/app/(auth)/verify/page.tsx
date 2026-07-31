@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ensureBackendAccount } from "@/lib/backendApi";
@@ -9,6 +9,14 @@ import { AuthButton } from "@/components/auth/AuthButton";
 const CODE_LENGTH = 8;
 
 export default function VerifyPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyForm />
+    </Suspense>
+  );
+}
+
+function VerifyForm() {
   const router = useRouter();
   const params = useSearchParams();
   const email = params.get("email") ?? "";
