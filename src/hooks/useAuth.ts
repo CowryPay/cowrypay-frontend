@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
 import { getMe, type PublicUser, type Wallet } from "@/lib/backendApi";
 
@@ -8,47 +8,80 @@ function shorten(address: string): string {
 }
 
 /**
- * The account's identity + custodial deposit wallet — issued automatically by
- * the backend on signup. Replaces the old injected-wallet (MetaMask-style)
- * connect flow entirely; there's nothing for the user to "connect" anymore.
+ * Shared auth store. useAuth is mounted by several components at the same time
+ * (ChatInterface + SettingsPanel), and each used to hold its own useState copy —
+ * so a mutation in one instance (e.g. setting the transaction PIN) only updated
+ * that one and the other stayed stale until a full page reload. Keeping the
+ * state at module scope and syncing every hook instance via useSyncExternalStore
+ * means a single refresh() pushes the new user/wallet to all subscribers at once.
  */
-export function useAuth() {
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<PublicUser | null>(null);
-  const [wallet, setWallet] = useState<Wallet | null>(null);
+type AuthState = {
+  loading: boolean;
+  user: PublicUser | null;
+  wallet: Wallet | null;
+};
 
-  const refresh = useCallback(async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
-      setUser(null);
-      setWallet(null);
-      setLoading(false);
-      return;
-    }
-    try {
-      const me = await getMe();
-      setUser(me.user);
-      setWallet(me.wallet);
-    } catch {
-      setUser(null);
-      setWallet(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+let state: AuthState = { loading: true, user: null, wallet: null };
+let initialized = false;
+const listeners = new Set<() => void>();
+
+function notify() {
+  listeners.forEach((l) => l());
+}
+
+function subscribe(onChange: () => void): () => void {
+  listeners.add(onChange);
+  if (!initialized) {
+    initialized = true;
+    void doRefresh();
+  }
+  return () => {
+    listeners.delete(onChange);
+  };
+}
+
+function getSnapshot(): AuthState {
+  return state;
+}
+
+/** Server-render fallback — components read the initial "loading" state. */
+function getServerSnapshot(): AuthState {
+  return { loading: true, user: null, wallet: null };
+}
+
+async function doRefresh(): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) {
+    state = { loading: false, user: null, wallet: null };
+    notify();
+    return;
+  }
+  try {
+    const me = await getMe();
+    state = { loading: false, user: me.user, wallet: me.wallet };
+  } catch {
+    state = { loading: false, user: null, wallet: null };
+  } finally {
+    notify();
+  }
+}
+
+export function useAuth() {
+  const { loading, user, wallet } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   useEffect(() => {
-    void refresh();
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      void refresh();
+      void doRefresh();
     });
     return () => sub.subscription.unsubscribe();
-  }, [refresh]);
+  }, []);
+
+  const refresh = useCallback(() => doRefresh(), []);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    setWallet(null);
+    state = { loading: false, user: null, wallet: null };
+    notify();
   }, []);
 
   return {

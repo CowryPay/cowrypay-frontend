@@ -264,11 +264,20 @@ export function useChat(user: PublicUser | null) {
           },
         });
         pendingSendRef.current = null;
+        const orderId = result.send.id.slice(0, 8);
         addMessage({
           role: "bot",
-          text:
-            `✅ Send created — order #${result.send.id.slice(0, 8)}.\n\n` +
-            `The payout is on its way to your recipient. I'll update you here once it settles.`,
+          text: "✅ Payment sent!",
+          response: {
+            type: "send_success",
+            orderId: `Order #${orderId}`,
+            message:
+              `Your ${formatFiat(
+                (parseFloat(draft.netAmount) * parseFloat(draft.rate)).toFixed(2),
+                draft.fiatCurrency,
+              )} ${draft.fiatCurrency} payment is on its way to ` +
+              `${draft.recipient.accountName}${draft.recipient.institutionName ? ` (${draft.recipient.institutionName})` : ""}.`,
+          },
         });
 
         pendingSaveRecipientRef.current = {
@@ -429,6 +438,7 @@ function responseToText(r: ChatResponse): string {
     case "tx_sent":    return "✅ Payment sent by Cowry AI agent!";
     case "tx_history": return `Here are your last ${r.items.length} transaction${r.items.length === 1 ? "" : "s"}:`;
     case "remittance_quote": return r.preview;
+    case "send_success":    return r.message;
     default:           return "...";
   }
 }

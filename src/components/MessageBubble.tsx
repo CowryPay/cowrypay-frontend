@@ -5,6 +5,7 @@ import { TxHistoryCard } from "./TxHistoryCard";
 import { RemittanceQuoteCard } from "./RemittanceQuoteCard";
 import { OnRampCard } from "./OnRampCard";
 import { DepositAddressCard } from "./DepositAddressCard";
+import { SendSuccessCard } from "./SendSuccessCard";
 
 interface Props {
   message:    Message;
@@ -29,7 +30,7 @@ export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove,
       <div className={`max-w-[82%] flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
 
         {/* Bubble — remittance quotes fold this text into the card below instead */}
-        {r?.type !== "remittance_quote" && (
+        {r?.type !== "remittance_quote" && r?.type !== "send_success" && (
           <div
             className={`px-4 py-3 rounded-[22px] text-sm whitespace-pre-wrap leading-relaxed ${
               isUser
@@ -134,6 +135,11 @@ export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove,
             onConfirm={onConfirm}
             onCancel={onCancel}
           />
+        )}
+
+        {/* Cross-border remittance send success — branded confirmation */}
+        {r?.type === "send_success" && (
+          <SendSuccessCard orderId={r.orderId} message={r.message} />
         )}
 
         <span className="text-[11px] text-cowry-muted px-1">

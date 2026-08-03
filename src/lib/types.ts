@@ -54,6 +54,15 @@ export type ChatResponse =
       items: TxHistoryItem[];
     }
   | {
+      /**
+       * A cross-border remittance send was created (Paycrest) — branded
+       * "Payment sent" success confirmation with the CowryPay mark.
+       */
+      type: "send_success";
+      orderId: string;
+      message: string;
+    }
+  | {
       /** Cross-border remittance quote awaiting user confirm (Paycrest). */
       type: "remittance_quote";
       preview: string;
