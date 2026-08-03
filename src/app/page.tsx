@@ -60,10 +60,9 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: 1, title: "Open Cowry", desc: "Connect your wallet in seconds, no signup needed." },
-  { n: 2, title: "Grant Cowry AI access", desc: "One-time approval lets the AI agent execute payments on your behalf." },
-  { n: 3, title: "Open Cowry", desc: "Connect your wallet in seconds, no signup needed." },
-  { n: 4, title: "Grant Cowry AI access", desc: "One-time approval lets the AI agent execute payments on your behalf." },
+  { n: 1, title: "Open CowryPay, create your account", desc: "Sign up in seconds — no forms, no manual entry." },
+  { n: 2, title: "Set your transaction PIN", desc: "You'll always be prompted to input your PIN before any transaction is executed." },
+  { n: 3, title: "CowryPay executes your payment", desc: "Your payment is executed in seconds." },
 ];
 
 export default function LandingPage() {
@@ -248,7 +247,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="mb-10">
             <p className="text-cowry-green text-xs font-semibold tracking-widest uppercase mb-3">How it works</p>
-            <h2 className="text-3xl sm:text-4xl font-black">Four steps from zero to paid</h2>
+            <h2 className="text-3xl sm:text-4xl font-black">Three steps from zero to paid</h2>
           </div>
 
           <div className="flex flex-col lg:flex-row gap-10 items-center">
