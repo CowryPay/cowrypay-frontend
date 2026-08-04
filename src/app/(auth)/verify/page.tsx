@@ -55,6 +55,20 @@ function VerifyForm() {
     }
   };
 
+  // Handled explicitly rather than relying on onChange to catch it — pasting
+  // into one of several small custom-styled boxes is unreliable on mobile
+  // (the browser's native paste behavior into a bounded field doesn't always
+  // produce a clean onChange we can redistribute from). Always fills from
+  // the first box regardless of which one was focused when the paste
+  // happened, since a full pasted code always represents the whole thing.
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, CODE_LENGTH);
+    if (!pasted) return;
+    e.preventDefault();
+    setDigits(Array.from({ length: CODE_LENGTH }, (_, i) => pasted[i] ?? ""));
+    inputsRef.current[Math.min(pasted.length, CODE_LENGTH - 1)]?.focus();
+  };
+
   const code = digits.join("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,10 +141,12 @@ function VerifyForm() {
               ref={(el) => { inputsRef.current[i] = el; }}
               type="text"
               inputMode="numeric"
+              autoComplete={i === 0 ? "one-time-code" : "off"}
               maxLength={CODE_LENGTH}
               value={d}
               onChange={(e) => handleChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
+              onPaste={handlePaste}
               autoFocus={i === 0}
               className="w-full aspect-square min-w-0 bg-cowry-card border border-cowry-border rounded-xl text-center text-lg font-bold text-white focus:outline-none focus:border-cowry-green/50 transition-colors"
             />

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CtaLink } from "@/components/CtaLink";
 
 const CURRENCIES = [
   { flag: "/Nigeria.png",  code: "NGN" },
@@ -76,12 +77,9 @@ export default function LandingPage() {
           </div>
         <div className="flex items-center gap-3">
           
-          <Link
-            href="/onboarding"
-            className="text-sm font-semibold bg-cowry-green text-black px-5 py-2 rounded-full hover:opacity-90 transition-opacity"
-          >
+          <CtaLink className="text-sm font-semibold bg-cowry-green text-black px-5 py-2 rounded-full hover:opacity-90 transition-opacity">
             Get Started →
-          </Link>
+          </CtaLink>
         </div>
       </nav>
 
@@ -101,12 +99,9 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-          <Link
-            href="/onboarding"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-cowry-green text-black font-bold px-8 py-3 rounded-full text-sm hover:opacity-90 transition-opacity"
-          >
+          <CtaLink className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-cowry-green text-black font-bold px-8 py-3 rounded-full text-sm hover:opacity-90 transition-opacity">
             Launch App →
-          </Link>
+          </CtaLink>
           <a
             href="#how-it-works"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-cowry-border text-white font-medium px-8 py-3 rounded-full text-sm hover:border-cowry-green/40 transition-colors"
@@ -317,12 +312,9 @@ export default function LandingPage() {
             Open CowryPay, grant Cowry AI access, and send your
             first payment in under a minute.
           </p>
-          <Link
-            href="/onboarding"
-            className="inline-flex items-center gap-2 bg-cowry-green text-black font-bold px-8 py-3 rounded-full text-sm hover:opacity-90 transition-opacity"
-          >
+          <CtaLink className="inline-flex items-center gap-2 bg-cowry-green text-black font-bold px-8 py-3 rounded-full text-sm hover:opacity-90 transition-opacity">
             Get started, it&apos;s free →
-          </Link>
+          </CtaLink>
         </div>
       </section>
 

@@ -280,6 +280,13 @@ export function useChat(user: PublicUser | null) {
           },
         });
 
+        // memo is only set when this recipient is already saved — either
+        // resolved via a saved nickname, or a freshly-typed account number
+        // the backend recognized as one already on file (see
+        // resolveRemittanceIntent's findByAccountIdentifier check). Prompting
+        // to save it again would just be noise on every repeat send.
+        if (draft.recipient.memo) return;
+
         pendingSaveRecipientRef.current = {
           institution:       draft.recipient.institution,
           institutionName:   draft.recipient.institutionName ?? draft.recipient.institution,
