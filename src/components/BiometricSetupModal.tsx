@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { setBiometricEnabled } from "@/lib/backendApi";
-import { registerBiometricCredential, clearBiometricCredential } from "@/lib/biometric";
+import { registerBiometricCredential, clearBiometricCredential, biometricLabel } from "@/lib/biometric";
 import { getErrorMessage } from "@/lib/errors";
 import { AuthButton } from "@/components/auth/AuthButton";
 
@@ -105,7 +105,7 @@ export function BiometricSetupModal({ mode, userId, email, onDone, onClose }: Pr
     } catch (err) {
       setError(getErrorMessage(
         err,
-        mode === "enable" ? "Could not enable Face ID / Fingerprint" : "Could not turn off Face ID / Fingerprint",
+        mode === "enable" ? `Could not enable ${biometricLabel()}` : `Could not turn off ${biometricLabel()}`,
       ));
       // The OTP was already verified — safe to let them retry the device
       // prompt (or the disable call) without sending a new code.
@@ -141,7 +141,7 @@ export function BiometricSetupModal({ mode, userId, email, onDone, onClose }: Pr
           <div className="w-10 h-1 bg-cowry-border rounded-full mx-auto mb-3 lg:hidden" />
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-white">
-              {mode === "enable" ? "Enable Face ID / Fingerprint" : "Turn Off Face ID / Fingerprint"}
+              {mode === "enable" ? `Enable ${biometricLabel()}` : `Turn Off ${biometricLabel()}`}
             </h2>
             <button onClick={onClose} className="text-cowry-muted hover:text-white text-xs px-2 py-1 transition-colors">
               Close

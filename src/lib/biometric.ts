@@ -4,6 +4,20 @@ function credentialKey(userId: string): string {
   return `${STORAGE_PREFIX}${userId}`;
 }
 
+/**
+ * The platform authenticator WebAuthn calls out to is decided by the OS, not
+ * by us — same code path works on any device. This just picks the label
+ * that matches what the OS itself calls it, the way Chase/PayPal/Revolut do
+ * ("Face ID" on iOS, "Fingerprint" on Android) instead of a generic
+ * cross-platform "Face ID / Fingerprint" slash-label.
+ */
+export function biometricLabel(): "Face ID" | "Fingerprint" | "Biometric login" {
+  if (typeof navigator === "undefined") return "Biometric login";
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) return "Face ID";
+  if (/android/i.test(navigator.userAgent)) return "Fingerprint";
+  return "Biometric login";
+}
+
 function bufferToBase64Url(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let str = "";

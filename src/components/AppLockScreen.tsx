@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { verifyBiometric } from "@/lib/biometric";
+import { verifyBiometric, biometricLabel } from "@/lib/biometric";
 
 type Props = {
   userId:   string;
@@ -33,7 +33,7 @@ export function AppLockScreen({ userId, onUnlock }: Props) {
       <p className="text-lg font-bold text-white mb-2">CowryPay is locked</p>
       <p className="text-sm text-cowry-muted mb-8">
         {checking
-          ? "Waiting for Face ID / Fingerprint…"
+          ? `Waiting for ${biometricLabel()}…`
           : failed
             ? "Verification failed or was cancelled."
             : ""}

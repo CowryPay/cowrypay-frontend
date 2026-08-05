@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { getErrorMessage } from "@/lib/errors";
-import { isBiometricAvailable, hasLocalBiometricCredential } from "@/lib/biometric";
+import { isBiometricAvailable, hasLocalBiometricCredential, biometricLabel } from "@/lib/biometric";
 import { SetPinModal } from "./SetPinModal";
 import { BiometricSetupModal } from "./BiometricSetupModal";
 
@@ -194,11 +194,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </button>
               </div>
               <SettingRow
-                title="Face ID / Fingerprint"
+                title={biometricLabel()}
                 desc={
                   biometricAvailable === false
                     ? "Not supported on this device or browser"
-                    : "Require biometrics to open app"
+                    : `Require ${biometricLabel()} to open app`
                 }
                 checked={biometricActiveOnDevice}
                 onChange={(next) => {
