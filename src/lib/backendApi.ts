@@ -247,6 +247,15 @@ export function verifyTransactionPin(pin: string): Promise<{ valid: boolean }> {
   return authedFetch("/auth/pin/verify", { method: "POST", body: JSON.stringify({ pin }) });
 }
 
+/**
+ * Persists the biometric-unlock preference. Requires a fresh login (same
+ * `reauth_required` gate as the PIN) and a PIN already set — the backend
+ * treats biometric as supplementary to the PIN, never a replacement for it.
+ */
+export function setBiometricEnabled(enabled: boolean): Promise<{ ok: boolean }> {
+  return authedFetch("/auth/biometric", { method: "POST", body: JSON.stringify({ enabled }) });
+}
+
 // ── Off-ramp (crypto → fiat send via Paycrest) ──────────────────────────────
 
 /**

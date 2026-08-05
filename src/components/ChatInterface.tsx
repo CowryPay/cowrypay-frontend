@@ -16,6 +16,8 @@ import { SettingsPanel }      from "./SettingsPanel";
 import { VerifyPinModal }     from "./VerifyPinModal";
 import { ReceiptModal }       from "./ReceiptModal";
 import { NotificationBell }   from "./NotificationBell";
+import { AppLockScreen }      from "./AppLockScreen";
+import { hasLocalBiometricCredential } from "@/lib/biometric";
 import type { Message }       from "@/lib/types";
 
 function formatDuration(totalSec: number): string {
@@ -51,6 +53,18 @@ export function ChatInterface() {
     pinVerifyOpen, closePinVerify, onPinVerified,
     receiptSendId, closeReceipt,
   } = useChat(user);
+
+  const [locked, setLocked] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    if (!user.biometricEnabled || !hasLocalBiometricCredential(user.id)) return;
+    if (sessionStorage.getItem(`cowrypay_unlocked_${user.id}`) === "1") return;
+    setLocked(true);
+  }, [user]);
+  const handleUnlock = () => {
+    if (user) sessionStorage.setItem(`cowrypay_unlocked_${user.id}`, "1");
+    setLocked(false);
+  };
 
   const hasGreetedRef = useRef(false);
   useEffect(() => {
@@ -386,6 +400,10 @@ export function ChatInterface() {
 
       {receiptSendId && (
         <ReceiptModal sendId={receiptSendId} onClose={closeReceipt} />
+      )}
+
+      {locked && user && (
+        <AppLockScreen userId={user.id} onUnlock={handleUnlock} />
       )}
     </div>
   );

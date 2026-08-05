@@ -1,8 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
+import { getErrorMessage } from "@/lib/errors";
+import { isBiometricAvailable, hasLocalBiometricCredential } from "@/lib/biometric";
 import { SetPinModal } from "./SetPinModal";
+import { BiometricSetupModal } from "./BiometricSetupModal";
 
 type Tab = "payment" | "security" | "notifications";
 
@@ -80,10 +84,36 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   };
 
   const [aiPermissions, setAiPermissions] = useState(true);
-  const [biometrics,    setBiometrics]    = useState(false);
-  const [txApproval,    setTxApproval]    = useState(true);
   const [pushNotifs,  setPushNotifs]  = useState(true);
   const [promotions,  setPromotions]  = useState(true);
+
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [resetError, setResetError] = useState("");
+
+  const [biometricAvailable, setBiometricAvailable] = useState<boolean | null>(null);
+  const [biometricModalMode, setBiometricModalMode] = useState<"enable" | "disable" | null>(null);
+  const [biometricError, setBiometricError] = useState("");
+  useEffect(() => {
+    void isBiometricAvailable().then(setBiometricAvailable);
+  }, []);
+  // True only if this device actually has a working local credential — a
+  // user who enabled it on a different device would otherwise see this
+  // toggle as "on" here despite Face ID/Fingerprint not doing anything.
+  const biometricActiveOnDevice = !!user && user.biometricEnabled && hasLocalBiometricCredential(user.id);
+
+  const handleResetPassword = async () => {
+    if (!user?.email || resettingPassword) return;
+    setResetError("");
+    setResettingPassword(true);
+    try {
+      const { error: otpError } = await supabase.auth.signInWithOtp({ email: user.email });
+      if (otpError) throw otpError;
+      router.push(`/verify?email=${encodeURIComponent(user.email)}&flow=reset`);
+    } catch (err) {
+      setResetError(getErrorMessage(err, "Could not send reset code"));
+      setResettingPassword(false);
+    }
+  };
 
   return (
     <div className="absolute inset-0 z-[65] bg-cowry-dark flex flex-col">
@@ -165,16 +195,37 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
               <SettingRow
                 title="Face ID / Fingerprint"
-                desc="Require biometrics to open app"
-                checked={biometrics}
-                onChange={setBiometrics}
+                desc={
+                  biometricAvailable === false
+                    ? "Not supported on this device or browser"
+                    : "Require biometrics to open app"
+                }
+                checked={biometricActiveOnDevice}
+                onChange={(next) => {
+                  if (biometricAvailable === false || !user) return;
+                  if (next && !user.pinSet) {
+                    setBiometricError("Set a transaction PIN first, then come back to enable this.");
+                    return;
+                  }
+                  setBiometricError("");
+                  setBiometricModalMode(next ? "enable" : "disable");
+                }}
               />
-              <SettingRow
-                title="Transaction Approval"
-                desc="Always ask before finalizing any payment"
-                checked={txApproval}
-                onChange={setTxApproval}
-              />
+              {biometricError && <p className="text-red-400 text-xs pt-2">{biometricError}</p>}
+              <div className="flex items-center justify-between gap-4 py-4 border-b border-cowry-border last:border-b-0">
+                <div>
+                  <p className="text-sm font-semibold text-white">Password</p>
+                  <p className="text-xs text-cowry-muted mt-0.5">Reset your password via an emailed code</p>
+                </div>
+                <button
+                  onClick={handleResetPassword}
+                  disabled={resettingPassword}
+                  className="text-xs font-semibold text-cowry-green hover:text-cowry-mint transition-colors border border-cowry-green/40 hover:border-cowry-green rounded-full px-3 py-1.5 disabled:opacity-50 flex-shrink-0"
+                >
+                  {resettingPassword ? "Sending…" : "Reset"}
+                </button>
+              </div>
+              {resetError && <p className="text-red-400 text-xs pt-2">{resetError}</p>}
             </div>
           )}
 
@@ -219,6 +270,19 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           onClose={() => setShowSetPin(false)}
           onDone={() => {
             setShowSetPin(false);
+            void refresh();
+          }}
+        />
+      )}
+
+      {biometricModalMode && user && (
+        <BiometricSetupModal
+          mode={biometricModalMode}
+          userId={user.id}
+          email={user.email}
+          onClose={() => setBiometricModalMode(null)}
+          onDone={() => {
+            setBiometricModalMode(null);
             void refresh();
           }}
         />
