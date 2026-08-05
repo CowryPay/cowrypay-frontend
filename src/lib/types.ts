@@ -102,6 +102,8 @@ export type TxHistoryItem = {
   txHash: string | null;
   explorerUrl: string | null;
   timestamp: string;
+  /** True for a COMPLETE send — GET /offramp/sends/:id/receipt is available. */
+  hasReceipt?: boolean;
 };
 
 // ── UI message model ──────────────────────────────────────────────────────────

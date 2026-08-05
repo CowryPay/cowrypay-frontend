@@ -63,7 +63,7 @@ const LIST_ITEMS: ListItem[] = [
   },
   {
     label: "Help Support",
-    desc:  "See everything Cowry can help you with",
+    desc:  "See everything CowryPay can help you with",
     template: "What can you do",
     icon: (
       <svg viewBox="0 0 24 24" className="w-5 h-5 fill-none stroke-current stroke-[1.5]">

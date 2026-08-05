@@ -4,6 +4,7 @@ import { getSends, getDeposits } from "@/lib/backendApi";
 import { describeSendState, describeDepositState } from "@/lib/txState";
 import type { TxHistoryItem } from "@/lib/types";
 import { TxHistoryRow } from "./TxHistoryRow";
+import { ReceiptModal } from "./ReceiptModal";
 
 interface Props {
   onClose: () => void;
@@ -35,6 +36,7 @@ async function loadHistory(): Promise<TxHistoryItem[]> {
       txHash: s.withdrawTxHash,
       explorerUrl: explorerUrl(s.withdrawTxHash),
       timestamp: s.createdAt,
+      hasReceipt: s.state === "COMPLETE",
     };
   });
 
@@ -63,6 +65,7 @@ export function TransactionHistoryModal({ onClose }: Props) {
   const [items, setItems] = useState<TxHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [receiptSendId, setReceiptSendId] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -123,12 +126,16 @@ export function TransactionHistoryModal({ onClose }: Props) {
           ) : (
             <div className="divide-y divide-cowry-border">
               {items.map((tx) => (
-                <TxHistoryRow key={tx.id} tx={tx} showDate />
+                <TxHistoryRow key={tx.id} tx={tx} showDate onViewReceipt={setReceiptSendId} />
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {receiptSendId && (
+        <ReceiptModal sendId={receiptSendId} onClose={() => setReceiptSendId(null)} />
+      )}
     </div>
   );
 }

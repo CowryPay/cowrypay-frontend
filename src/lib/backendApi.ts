@@ -125,6 +125,38 @@ export function getSends(): Promise<{ sends: Send[] }> {
   return authedFetch("/offramp/sends");
 }
 
+export type SendTransition = { toState: SendState; createdAt: string };
+
+/** Single send lookup with its state-transition history — used to poll a send until it settles. */
+export function getSend(id: string): Promise<{ send: Send; transitions: SendTransition[] }> {
+  return authedFetch(`/offramp/sends/${id}`);
+}
+
+export type SendReceipt = {
+  reference:           string;
+  amountSent:          string;
+  tokenSymbol:          string;
+  feeAmount:            string;
+  netAmount:            string;
+  rate:                 string | null;
+  fiatCurrency:         string;
+  fiatAmountReceived:   string | null;
+  recipient: {
+    accountName:              string;
+    accountIdentifierMasked:  string;
+    institutionName:          string;
+  };
+  status:         SendState;
+  createdAt:      string;
+  completedAt:    string;
+  withdrawTxHash: string | null;
+};
+
+/** Only available once a send has reached COMPLETE — 400s otherwise. */
+export function getSendReceipt(id: string): Promise<{ receipt: SendReceipt }> {
+  return authedFetch(`/offramp/sends/${id}/receipt`);
+}
+
 export type OfframpSendRecipient = {
   institution:       string;
   /** Human-readable label for `institution` (e.g. "OPay") — the code alone isn't fit to show a user. */

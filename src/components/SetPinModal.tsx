@@ -59,6 +59,20 @@ export function SetPinModal({ email, onDone, onClose }: Props) {
     }
   };
 
+  // Handled explicitly rather than relying on onChange to catch it — pasting
+  // into one of several small custom-styled boxes is unreliable on mobile
+  // (the browser's native paste behavior into a bounded field doesn't always
+  // produce a clean onChange we can redistribute from). Always fills from
+  // the first box regardless of which one was focused when the paste
+  // happened, since a full pasted code always represents the whole thing.
+  const handleDigitPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, CODE_LENGTH);
+    if (!pasted) return;
+    e.preventDefault();
+    setDigits(Array.from({ length: CODE_LENGTH }, (_, i) => pasted[i] ?? ""));
+    inputsRef.current[Math.min(pasted.length, CODE_LENGTH - 1)]?.focus();
+  };
+
   const sendCode = async () => {
     if (!email) {
       setError("No email on file — try signing in again.");
@@ -197,8 +211,10 @@ export function SetPinModal({ email, onDone, onClose }: Props) {
                     inputMode="numeric"
                     maxLength={CODE_LENGTH}
                     value={d}
+                    autoComplete={i === 0 ? "one-time-code" : "off"}
                     onChange={(e) => handleDigitChange(i, e.target.value)}
                     onKeyDown={(e) => handleDigitKeyDown(i, e)}
+                    onPaste={handleDigitPaste}
                     autoFocus={i === 0}
                     className="w-full aspect-square min-w-0 bg-cowry-card border border-cowry-border rounded-xl text-center text-lg font-bold text-white focus:outline-none focus:border-cowry-green/50 transition-colors"
                   />

@@ -2,18 +2,22 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title:       "Cowry — Talk. Send. Automate.",
+  title:       "CowryPay — Talk. Send. Automate.",
   description: "AI-powered crypto payments on Celo. Send money as easily as sending a message.",
   manifest:    "/manifest.json",
   appleWebApp: {
     capable:       true,
     statusBarStyle: "black-translucent",
-    title:         "Cowry",
+    title:         "CowryPay",
+  },
+  icons: {
+    icon:     [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple:    [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
-    title:       "Cowry — Talk. Send. Automate.",
+    title:       "CowryPay — Talk. Send. Automate.",
     description: "AI-powered conversational crypto payments on Celo.",
-    images:      [{ url: "/cowry.png" }],
+    images:      [{ url: "/icon-512.png" }],
   },
 };
 

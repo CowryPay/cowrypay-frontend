@@ -188,7 +188,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               />
               <SettingRow
                 title="Promotions & Updates"
-                desc="Stay up to date on Cowry news, features, and offers"
+                desc="Stay up to date on CowryPay news, features, and offers"
                 checked={promotions}
                 onChange={setPromotions}
               />

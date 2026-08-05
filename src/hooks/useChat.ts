@@ -28,6 +28,8 @@ export function useChat(user: PublicUser | null) {
    */
   const [txLoading, setTxLoading] = useState(false);
   const [pinVerifyOpen, setPinVerifyOpen] = useState(false);
+  /** Set right after a send is submitted — opens the receipt modal, which polls until it settles. */
+  const [receiptSendId, setReceiptSendId] = useState<string | null>(null);
   const sessionIdRef = useRef(newSessionId());
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -230,6 +232,7 @@ export function useChat(user: PublicUser | null) {
   }, [addMessage]);
 
   const closePinVerify = useCallback(() => setPinVerifyOpen(false), []);
+  const closeReceipt = useCallback(() => setReceiptSendId(null), []);
 
   /**
    * VerifyPinModal already confirmed this PIN is correct before calling this
@@ -264,6 +267,7 @@ export function useChat(user: PublicUser | null) {
           },
         });
         pendingSendRef.current = null;
+        setReceiptSendId(result.send.id);
         const orderId = result.send.id.slice(0, 8);
         addMessage({
           role: "bot",
@@ -432,6 +436,8 @@ export function useChat(user: PublicUser | null) {
     pinVerifyOpen,
     closePinVerify,
     onPinVerified,
+    receiptSendId,
+    closeReceipt,
   };
 }
 

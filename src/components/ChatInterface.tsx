@@ -14,6 +14,7 @@ import { CommandMenu }        from "./CommandMenu";
 import { TransactionHistoryModal } from "./TransactionHistoryModal";
 import { SettingsPanel }      from "./SettingsPanel";
 import { VerifyPinModal }     from "./VerifyPinModal";
+import { ReceiptModal }       from "./ReceiptModal";
 import { NotificationBell }   from "./NotificationBell";
 import type { Message }       from "@/lib/types";
 
@@ -48,6 +49,7 @@ export function ChatInterface() {
   const {
     messages, loading, txLoading, send, stop, confirm, cancel, signAndSend, addBotMessage, bottomRef,
     pinVerifyOpen, closePinVerify, onPinVerified,
+    receiptSendId, closeReceipt,
   } = useChat(user);
 
   const hasGreetedRef = useRef(false);
@@ -137,7 +139,7 @@ export function ChatInterface() {
           className="flex items-center justify-center w-9 h-9 rounded-full bg-cowry-card border border-cowry-border hover:border-cowry-green/40 transition-colors lg:hidden"
           title="Back to homepage"
         >
-          <Image src="/logo.png" alt="Cowry" width={18} height={18} />
+          <Image src="/logo.png" alt="CowryPay" width={18} height={18} />
         </Link>
         <Link href="/" className="hidden lg:block" title="Back to homepage">
           <Image src="/CowryPay.png" alt="CowryPay" width={140} height={27} className="object-contain" />
@@ -380,6 +382,10 @@ export function ChatInterface() {
 
       {pinVerifyOpen && (
         <VerifyPinModal onClose={closePinVerify} onVerified={onPinVerified} />
+      )}
+
+      {receiptSendId && (
+        <ReceiptModal sendId={receiptSendId} onClose={closeReceipt} />
       )}
     </div>
   );

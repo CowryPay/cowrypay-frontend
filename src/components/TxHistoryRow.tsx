@@ -10,7 +10,13 @@ function formatDate(iso: string): string {
     " · " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export function TxHistoryRow({ tx, showDate = false }: { tx: TxHistoryItem; showDate?: boolean }) {
+type Props = {
+  tx: TxHistoryItem;
+  showDate?: boolean;
+  onViewReceipt?: (sendId: string) => void;
+};
+
+export function TxHistoryRow({ tx, showDate = false, onViewReceipt }: Props) {
   const [copied, setCopied] = useState(false);
 
   async function copyHash() {
@@ -52,21 +58,34 @@ export function TxHistoryRow({ tx, showDate = false }: { tx: TxHistoryItem; show
         </p>
       </div>
 
-      {tx.txHash && (
+      {(tx.hasReceipt || tx.txHash) && (
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={copyHash}
-            title="Copy transaction hash"
-            className="w-7 h-7 rounded-lg bg-cowry-darker border border-cowry-border hover:border-cowry-green/40 flex items-center justify-center transition-colors"
-          >
-            {copied ? (
-              <span className="text-green-400 text-[10px]">✓</span>
-            ) : (
+          {tx.hasReceipt && onViewReceipt && (
+            <button
+              onClick={() => onViewReceipt(tx.id)}
+              title="View receipt"
+              className="w-7 h-7 rounded-lg bg-cowry-darker border border-cowry-border hover:border-cowry-green/40 flex items-center justify-center transition-colors"
+            >
               <svg viewBox="0 0 24 24" className="w-3 h-3 fill-cowry-muted">
-                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                <path d="M6 2h9l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8V12zm0 3h8v1.5H8V15zm0-6h4v1.5H8V9z" />
               </svg>
-            )}
-          </button>
+            </button>
+          )}
+          {tx.txHash && (
+            <button
+              onClick={copyHash}
+              title="Copy transaction hash"
+              className="w-7 h-7 rounded-lg bg-cowry-darker border border-cowry-border hover:border-cowry-green/40 flex items-center justify-center transition-colors"
+            >
+              {copied ? (
+                <span className="text-green-400 text-[10px]">✓</span>
+              ) : (
+                <svg viewBox="0 0 24 24" className="w-3 h-3 fill-cowry-muted">
+                  <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                </svg>
+              )}
+            </button>
+          )}
 
           {tx.explorerUrl && (
             <a
