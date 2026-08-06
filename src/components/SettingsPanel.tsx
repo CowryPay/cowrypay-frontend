@@ -8,6 +8,8 @@ import { isBiometricAvailable, hasLocalBiometricCredential, biometricLabel } fro
 import { SetPinModal } from "./SetPinModal";
 import { BiometricSetupModal } from "./BiometricSetupModal";
 
+const TELEGRAM_COMMUNITY_URL = "https://t.me/+Qg01n46gCeZmYTU0";
+
 type Tab = "payment" | "security" | "notifications";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -226,6 +228,20 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </button>
               </div>
               {resetError && <p className="text-red-400 text-xs pt-2">{resetError}</p>}
+              <div className="flex items-center justify-between gap-4 py-4 last:border-b-0">
+                <div>
+                  <p className="text-sm font-semibold text-white">Help & Support</p>
+                  <p className="text-xs text-cowry-muted mt-0.5">Get help or chat with the CowryPay community</p>
+                </div>
+                <a
+                  href={TELEGRAM_COMMUNITY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-cowry-green hover:text-cowry-mint transition-colors border border-cowry-green/40 hover:border-cowry-green rounded-full px-3 py-1.5 flex-shrink-0"
+                >
+                  Join
+                </a>
+              </div>
             </div>
           )}
 
