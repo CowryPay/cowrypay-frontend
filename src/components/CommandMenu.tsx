@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import Image from "next/image";
 
-type Action = "cross-chain" | "tx-history" | "settings";
+type Action = "cross-chain" | "tx-history" | "settings" | "deposit";
 
 interface GridItem {
   label:    string;
@@ -22,6 +22,18 @@ interface ListItem {
 }
 
 const GRID_ITEMS: GridItem[] = [
+  {
+    label: "Deposit",
+    desc:  "Fund your account — Celo, Base, Optimism, Solana, or Stellar",
+    action: "deposit",
+    iconBg: "bg-cowry-green shadow-[0_0_18px_4px_rgba(0,212,55,0.45)]",
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-none stroke-black stroke-2">
+        <path d="M12 4v12M6 12l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4 20h16" strokeLinecap="round" />
+      </svg>
+    ),
+  },
   {
     label: "Buy USDC",
     desc:  "Buy USDC with local currency",
@@ -86,10 +98,11 @@ interface Props {
   onOpenCrossChain: () => void;
   onOpenTxHistory:  () => void;
   onOpenSettings:   () => void;
+  onOpenDeposit:   () => void;
   onClose:         () => void;
 }
 
-export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpenSettings, onClose }: Props) {
+export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpenSettings, onOpenDeposit, onClose }: Props) {
   // Close on Escape key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -101,6 +114,7 @@ export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpe
     if (item.action === "cross-chain") onOpenCrossChain();
     else if (item.action === "tx-history") onOpenTxHistory();
     else if (item.action === "settings") onOpenSettings();
+    else if (item.action === "deposit") onOpenDeposit();
     else if (item.template) onSelect(item.template);
     onClose();
   };

@@ -221,6 +221,8 @@ export function ReceiptModal({ sendId, onClose }: Props) {
               <div className="bg-cowry-card border border-cowry-border rounded-2xl divide-y divide-cowry-border">
                 <Row label="Reference" value={receipt.reference} mono />
                 <Row label="You sent" value={`${formatToken(receipt.amountSent)} ${receipt.tokenSymbol}`} />
+                <Row label="Fee" value={`${formatToken(receipt.feeAmount)} ${receipt.tokenSymbol}`} />
+                <Row label="Network" value={receipt.chain.charAt(0).toUpperCase() + receipt.chain.slice(1)} />
                 <Row label="To account" value={receipt.recipient.accountIdentifierMasked} mono />
                 <Row label="Sent" value={new Date(receipt.createdAt).toLocaleString()} />
                 <Row label="Completed" value={new Date(receipt.completedAt).toLocaleString()} />

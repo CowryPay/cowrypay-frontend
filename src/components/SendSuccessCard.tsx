@@ -24,7 +24,7 @@ export function SendSuccessCard({ orderId, message }: Props) {
       </div>
 
       {message && (
-        <p className="text-sm text-cowry-muted leading-relaxed mb-4">{message}</p>
+        <p className="text-sm text-cowry-muted leading-relaxed mb-4 whitespace-pre-wrap">{message}</p>
       )}
 
       <div className="flex items-center gap-2 pt-3 border-t border-cowry-border">

@@ -55,11 +55,42 @@ export function confirmPasswordSet(): Promise<{ user: PublicUser }> {
   return authedFetch("/auth/password/confirm", { method: "POST" });
 }
 
-export function getMe(): Promise<{ user: PublicUser; wallet: Wallet; balances: unknown[] }> {
+/** Balances are tracked per (token, chain) — USDC on one chain isn't spendable on another. */
+export type LedgerBalance = {
+  id:               string;
+  userId:           string;
+  tokenSymbol:      string;
+  chain:            string;
+  availableBalance: string;
+  pendingBalance:   string;
+  updatedAt:        string;
+};
+
+export function getMe(): Promise<{ user: PublicUser; wallet: Wallet; balances: LedgerBalance[] }> {
   return authedFetch("/me");
 }
 
-/** Deterministic welcome text (greeting + deposit address) — call once right after auth. */
+/**
+ * Solana deposit address — a dedicated per-user on-chain address, unlike
+ * the shared EVM one. Auto-provisioned in the background at signup, but
+ * idempotent, so this is a safe on-demand fallback if that hasn't finished
+ * yet (or failed).
+ */
+export function getSolanaWallet(): Promise<{ address: string }> {
+  return authedFetch("/wallets/solana");
+}
+
+/**
+ * Stellar deposit address — shared across every user; `memo` is what
+ * actually identifies this user's deposits and MUST be included, or the
+ * deposit can't be credited automatically. Provisioned synchronously at
+ * signup, but idempotent, so also safe to call on demand.
+ */
+export function getStellarWallet(): Promise<{ address: string; memo: string }> {
+  return authedFetch("/wallets/stellar");
+}
+
+/** Deterministic welcome text — call once right after auth. No longer includes an address (see /wallets/* and the chat deposit-chain flow). */
 export function getChatWelcome(): Promise<{ reply: string }> {
   return authedFetch("/chat/welcome");
 }
@@ -135,10 +166,9 @@ export function getSend(id: string): Promise<{ send: Send; transitions: SendTran
 export type SendReceipt = {
   reference:           string;
   amountSent:          string;
-  tokenSymbol:          string;
   feeAmount:            string;
-  netAmount:            string;
-  rate:                 string | null;
+  tokenSymbol:          string;
+  chain:                string;
   fiatCurrency:         string;
   fiatAmountReceived:   string | null;
   recipient: {
@@ -212,6 +242,8 @@ export type RemittanceDraft = {
   orderId:         string;
   receiveAddress:  string;
   validUntil:      string;
+  /** Which chain this quote (and the eventual payout) is locked to — a wallet can hold balance on more than one. */
+  chain:           string;
 };
 
 /**
@@ -275,6 +307,8 @@ export function createOfframpSend(input: {
   recipient:     OfframpSendRecipient;
   pin:           string;
   rate?:         string;
+  /** Which chain to pay out from — omit to default to the wallet's chain (only matters once a wallet holds balance on more than one). */
+  chain?:        string;
   existingOrder?: {
     orderId:         string;
     receiveAddress:  string;
@@ -284,6 +318,12 @@ export function createOfframpSend(input: {
     feeAmount:       string;
     treasuryAddress: string;
   };
-}): Promise<{ send: { id: string; state: string }; receiveAddress: string; validUntil: string }> {
+}): Promise<{
+  send: { id: string; state: string };
+  receiveAddress: string;
+  validUntil: string;
+  /** Friendly "processing" confirmation text — deliberately not "completed," since settlement isn't confirmed yet. */
+  message: string;
+}> {
   return authedFetch("/offramp/sends", { method: "POST", body: JSON.stringify(input) });
 }

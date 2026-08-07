@@ -108,7 +108,14 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     setResetError("");
     setResettingPassword(true);
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({ email: user.email });
+      // shouldCreateUser: false for consistency with sign-in's forgot-password
+      // flow — not reachable here since this email is always the already
+      // signed-in user's own, but a reset action should never risk creating
+      // an account as a side effect regardless.
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: user.email,
+        options: { shouldCreateUser: false },
+      });
       if (otpError) throw otpError;
       router.push(`/verify?email=${encodeURIComponent(user.email)}&flow=reset`);
     } catch (err) {

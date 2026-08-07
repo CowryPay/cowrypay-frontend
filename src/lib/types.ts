@@ -74,6 +74,8 @@ export type ChatResponse =
       rateLabel: string;
       /** Platform fee displayed to the user, e.g. "0.5 USDC". */
       feeLabel: string;
+      /** Which chain this quote is locked to — worth surfacing once a wallet can hold balance on more than one. */
+      chain: string;
     }
   | {
       /** On-ramp order created — shows virtual bank account for user to pay into. */
@@ -117,6 +119,8 @@ export type Message = {
   /** Set only on the post-auth welcome message — renders a copyable address card. */
   depositAddress?: string;
   depositChain?: string;
+  /** True for a self-custody (aws-kms) wallet — the same address accepts deposits on every supported chain, not just `depositChain`. */
+  depositMultiChain?: boolean;
 };
 
 // ── Bridge types ──────────────────────────────────────────────────────────────

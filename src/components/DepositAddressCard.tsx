@@ -1,9 +1,18 @@
 "use client";
 import { useState } from "react";
+import { QrCode } from "./QrCode";
+
+// Mirrors the backend's chain registry (backend/src/domain/wallets/chains.ts)
+// — a self-custody (aws-kms) wallet derives one address valid on every one
+// of these, so the same deposit address works across all of them, not just
+// `chain`. No endpoint exposes this list yet, so it's kept in sync by hand.
+const SELF_CUSTODY_CHAINS = ["Celo", "Base", "Optimism"];
 
 type Props = {
-  address: string;
-  chain:   string;
+  address:     string;
+  chain:       string;
+  /** True for a self-custody (aws-kms) wallet — this address isn't limited to `chain`. */
+  multiChain?: boolean;
 };
 
 function CopyIcon() {
@@ -23,7 +32,7 @@ function CheckIcon() {
   );
 }
 
-export function DepositAddressCard({ address, chain }: Props) {
+export function DepositAddressCard({ address, chain, multiChain }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -38,11 +47,27 @@ export function DepositAddressCard({ address, chain }: Props) {
 
   return (
     <div className="w-full bg-cowry-card border border-cowry-green/30 rounded-[22px] px-4 py-3">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs text-cowry-muted">Deposit address</span>
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-cowry-green bg-cowry-green/10 border border-cowry-green/30 rounded-full px-2 py-0.5">
-          {chain}
-        </span>
+      <div className="flex items-center justify-between mb-1.5 gap-2">
+        <span className="text-xs text-cowry-muted flex-shrink-0">Deposit address</span>
+        {multiChain ? (
+          <div className="flex items-center gap-1 flex-wrap justify-end">
+            {SELF_CUSTODY_CHAINS.map((c) => (
+              <span
+                key={c}
+                className="text-[10px] font-semibold uppercase tracking-wide text-cowry-green bg-cowry-green/10 border border-cowry-green/30 rounded-full px-2 py-0.5"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-cowry-green bg-cowry-green/10 border border-cowry-green/30 rounded-full px-2 py-0.5">
+            {chain}
+          </span>
+        )}
+      </div>
+      <div className="my-3">
+        <QrCode value={address} />
       </div>
       <div className="flex items-center gap-2">
         <span className="flex-1 min-w-0 text-sm font-mono text-white break-all leading-snug">
@@ -57,6 +82,11 @@ export function DepositAddressCard({ address, chain }: Props) {
           {copied ? <CheckIcon /> : <CopyIcon />}
         </button>
       </div>
+      {multiChain && (
+        <p className="text-[11px] text-cowry-muted mt-1.5">
+          Send USDC on any of the chains above to this same address.
+        </p>
+      )}
     </div>
   );
 }

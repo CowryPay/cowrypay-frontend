@@ -1,5 +1,6 @@
 "use client";
 import type { Message } from "@/lib/types";
+import { linkify } from "@/lib/linkify";
 import { TransactionCard } from "./TransactionCard";
 import { TxHistoryCard } from "./TxHistoryCard";
 import { RemittanceQuoteCard } from "./RemittanceQuoteCard";
@@ -40,13 +41,17 @@ export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove,
                   : "bg-[#141C16] border border-cowry-green/10 text-white"
             }`}
           >
-            {message.text}
+            {linkify(message.text, isUser ? "underline text-white" : "text-cowry-green hover:text-cowry-mint underline")}
           </div>
         )}
 
         {/* Deposit address — its own card, sits below the welcome text */}
         {message.depositAddress && (
-          <DepositAddressCard address={message.depositAddress} chain={message.depositChain ?? "Celo"} />
+          <DepositAddressCard
+            address={message.depositAddress}
+            chain={message.depositChain ?? "Celo"}
+            multiChain={message.depositMultiChain}
+          />
         )}
 
         {/* Approve button */}
@@ -132,6 +137,7 @@ export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove,
             receiveCurrency={r.receiveCurrency}
             rateLabel={r.rateLabel}
             feeLabel={r.feeLabel}
+            chain={r.chain}
             onConfirm={onConfirm}
             onCancel={onCancel}
           />

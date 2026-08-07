@@ -105,7 +105,15 @@ function VerifyForm() {
     setError("");
     setResending(true);
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({ email });
+      // shouldCreateUser must stay true for signup (that's the whole point —
+      // the account doesn't exist yet) but false for reset, so a reset link
+      // reached directly (e.g. a hand-typed /verify?email=...&flow=reset URL)
+      // can't silently create a ghost account for an email with no account,
+      // same fix as sign-in's forgot-password flow.
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: flow !== "reset" },
+      });
       if (otpError) throw otpError;
     } catch (err) {
       setError(getErrorMessage(err, "Could not resend code"));

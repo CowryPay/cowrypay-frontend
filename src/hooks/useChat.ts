@@ -19,7 +19,19 @@ function newSessionId(): string {
 /** Clear server pending state after this long without a user message. */
 const IDLE_RESET_MS = 20 * 60 * 1000;
 
-export function useChat(user: PublicUser | null) {
+// Mirrors the backend's DEPOSIT_INTENT_RE + ADDRESS_RE + CHAIN_NAME_RE
+// (ai-agent/chat/intent.ts) — kept in sync by hand. Intercepted client-side
+// rather than sent to /chat so a deposit/address request opens DepositModal
+// (QR code, copy buttons, backed by the real GET /wallets/solana|stellar
+// endpoints) instead of getting the backend's plain-text reply, which has
+// no way to render a rich card. Two separate patterns, same as backend —
+// "I want to deposit" and "what's my address" are phrased differently but
+// mean the same thing here.
+const DEPOSIT_INTENT_RE = /\b(deposit|top ?up|fund my (wallet|account)|add (money|funds|usdc))\b/i;
+const ADDRESS_RE = /\b(deposit address|wallet address|my address|my wallet)\b/i;
+const CHAIN_NAME_RE = /\b(celo|base|optimism|stellar|solana)\b/i;
+
+export function useChat(user: PublicUser | null, onDepositIntent?: (chain: string | null) => void) {
   const [messages,  setMessages]  = useState<Message[]>([]);
   const [loading,   setLoading]   = useState(false);
   /**
@@ -106,7 +118,7 @@ export function useChat(user: PublicUser | null) {
         "🌍 Cross-Border Payment",
         `To: ${recipientLabel}`,
         `They get: ${formatFiat(receiveAmount, pendingSend.fiatCurrency)} ${pendingSend.fiatCurrency}`,
-        `You send: ${sendAmount} USDC`,
+        `You send: ${sendAmount} USDC (${pendingSend.chain})`,
         `Fee: ${feeAmount} USDC`,
         `Rate: 1 USD ≈ ${formatFiat(pendingSend.rate, pendingSend.fiatCurrency)} (locked for ~1hr)`,
         "",
@@ -123,6 +135,7 @@ export function useChat(user: PublicUser | null) {
         receiveCurrency: pendingSend.fiatCurrency,
         rateLabel: `1 USDC ≈ ${pendingSend.rate} ${pendingSend.fiatCurrency}`,
         feeLabel: `${feeAmount} USDC`,
+        chain: pendingSend.chain,
       };
     }
     return { type: "info", message: reply };
@@ -134,6 +147,16 @@ export function useChat(user: PublicUser | null) {
 
       scheduleIdleReset();
       addMessage({ role: "user", text });
+
+      // Deposit/address requests are handled entirely client-side — see
+      // DEPOSIT_INTENT_RE/ADDRESS_RE above for why this never reaches /chat.
+      if (DEPOSIT_INTENT_RE.test(text) || ADDRESS_RE.test(text)) {
+        const chainMatch = text.match(CHAIN_NAME_RE);
+        const chain = chainMatch ? chainMatch[1].toLowerCase() : null;
+        addMessage({ role: "bot", text: chain ? "Here you go 👇" : "Sure — pick a chain below 👇" });
+        onDepositIntent?.(chain);
+        return;
+      }
 
       // The previous bot message asked "save this recipient?" — this reply is
       // the nickname (or a skip), not a normal message for the chat backend.
@@ -203,7 +226,7 @@ export function useChat(user: PublicUser | null) {
         setLoading(false);
       }
     },
-    [loading, addMessage, fetchAgentResponse, appendBotResponse, scheduleIdleReset, resetSessionState],
+    [loading, addMessage, fetchAgentResponse, appendBotResponse, scheduleIdleReset, resetSessionState, onDepositIntent],
   );
 
   /** Abort the in-flight request and silently reset server session state. */
@@ -256,6 +279,7 @@ export function useChat(user: PublicUser | null) {
           recipient: draft.recipient,
           pin,
           rate: draft.rate,
+          chain: draft.chain,
           existingOrder: {
             orderId:         draft.orderId,
             receiveAddress:  draft.receiveAddress,
@@ -271,16 +295,14 @@ export function useChat(user: PublicUser | null) {
         const orderId = result.send.id.slice(0, 8);
         addMessage({
           role: "bot",
-          text: "✅ Payment sent!",
+          text: result.message,
           response: {
             type: "send_success",
             orderId: `Order #${orderId}`,
-            message:
-              `Your ${formatFiat(
-                (parseFloat(draft.netAmount) * parseFloat(draft.rate)).toFixed(2),
-                draft.fiatCurrency,
-              )} ${draft.fiatCurrency} payment is on its way to ` +
-              `${draft.recipient.accountName}${draft.recipient.institutionName ? ` (${draft.recipient.institutionName})` : ""}.`,
+            // Backend's own wording — deliberately says "processing," not
+            // "sent"/"complete," since settlement isn't confirmed at this
+            // point (see domain/offramp/service.ts on the backend).
+            message: result.message,
           },
         });
 
@@ -416,7 +438,7 @@ export function useChat(user: PublicUser | null) {
   );
 
   const addBotMessage = useCallback(
-    (text: string, extra?: Partial<Pick<Message, "depositAddress" | "depositChain">>) => {
+    (text: string, extra?: Partial<Pick<Message, "depositAddress" | "depositChain" | "depositMultiChain">>) => {
       addMessage({ role: "bot", text, ...extra });
     },
     [addMessage],

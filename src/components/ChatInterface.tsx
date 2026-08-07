@@ -17,6 +17,7 @@ import { VerifyPinModal }     from "./VerifyPinModal";
 import { ReceiptModal }       from "./ReceiptModal";
 import { NotificationBell }   from "./NotificationBell";
 import { AppLockScreen }      from "./AppLockScreen";
+import { DepositModal }       from "./DepositModal";
 import { hasLocalBiometricCredential } from "@/lib/biometric";
 import type { Message }       from "@/lib/types";
 
@@ -28,9 +29,10 @@ function formatDuration(totalSec: number): string {
 
 type Suggestion =
   | { kind: "text"; text: string; icon: string }
-  | { kind: "action"; text: string; icon: string; action: "cross-chain" | "tx-history" };
+  | { kind: "action"; text: string; icon: string; action: "cross-chain" | "tx-history" | "deposit" };
 
 const SUGGESTIONS: Suggestion[] = [
+  { kind: "action", text: "Deposit",                             icon: "/Vector%201.png", action: "deposit" },
   { kind: "text",   text: "Send $20 to mobile money in Kenya",   icon: "/Vector.png" },
   { kind: "text",   text: "What's my balance",                   icon: "/Vector%201.png" },
   { kind: "action", text: "Cross-chain send",                    icon: "/Vector%202.png", action: "cross-chain" },
@@ -48,11 +50,14 @@ export function ChatInterface() {
     }
   }, [authLoading, user, router]);
 
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [depositInitialChain, setDepositInitialChain] = useState<string | null>(null);
+
   const {
     messages, loading, txLoading, send, stop, confirm, cancel, signAndSend, addBotMessage, bottomRef,
     pinVerifyOpen, closePinVerify, onPinVerified,
     receiptSendId, closeReceipt,
-  } = useChat(user);
+  } = useChat(user, (chain) => { setDepositInitialChain(chain); setShowDeposit(true); });
 
   const [locked, setLocked] = useState(false);
   useEffect(() => {
@@ -70,17 +75,15 @@ export function ChatInterface() {
   useEffect(() => {
     if (authLoading || hasGreetedRef.current || !user || !wallet) return;
     hasGreetedRef.current = true;
+    // No address in the welcome text anymore — a user now has three genuinely
+    // different deposit flows (shared EVM address, dedicated Solana address,
+    // shared Stellar address + memo), so auto-showing just one by default
+    // would be incomplete. The Deposit suggestion/command opens DepositModal
+    // to pick one instead.
     void getChatWelcome()
-      .then(({ reply }) => {
-        // Drop the plain-text address paragraph — DepositAddressCard renders it instead.
-        const prose = reply
-          .split("\n\n")
-          .filter((para) => !para.includes(wallet.address))
-          .join("\n\n");
-        addBotMessage(prose, { depositAddress: wallet.address, depositChain: wallet.chain });
-      })
+      .then(({ reply }) => addBotMessage(reply))
       .catch(() => {
-        // Best-effort greeting — the deposit address is still visible in the wallet badge.
+        // Best-effort greeting — deposit is still reachable via the Deposit suggestion.
       });
   }, [authLoading, user, wallet, addBotMessage]);
 
@@ -220,6 +223,7 @@ export function ChatInterface() {
                     if (s.kind === "action") {
                       if (s.action === "cross-chain") crossChainComingSoon();
                       else if (s.action === "tx-history") setShowTxHistory(true);
+                      else if (s.action === "deposit") { setDepositInitialChain(null); setShowDeposit(true); }
                     } else {
                       setInput(s.text);
                       inputRef.current?.focus();
@@ -382,6 +386,7 @@ export function ChatInterface() {
           onOpenCrossChain={() => { setShowCommands(false); crossChainComingSoon(); }}
           onOpenTxHistory={() => { setShowCommands(false); setShowTxHistory(true); }}
           onOpenSettings={() => { setShowCommands(false); setShowSettings(true); }}
+          onOpenDeposit={() => { setShowCommands(false); setDepositInitialChain(null); setShowDeposit(true); }}
           onClose={() => setShowCommands(false)}
         />
       )}
@@ -400,6 +405,14 @@ export function ChatInterface() {
 
       {receiptSendId && (
         <ReceiptModal sendId={receiptSendId} onClose={closeReceipt} />
+      )}
+
+      {showDeposit && wallet && (
+        <DepositModal
+          wallet={wallet}
+          initialChain={depositInitialChain}
+          onClose={() => { setShowDeposit(false); setDepositInitialChain(null); }}
+        />
       )}
 
       {locked && user && (

@@ -10,6 +10,7 @@ type Props = {
   receiveCurrency: string;
   rateLabel:       string;
   feeLabel:        string;
+  chain:           string;
   onConfirm:       () => void;
   onCancel:        () => void;
 };
@@ -21,6 +22,7 @@ export function RemittanceQuoteCard({
   sendToken,
   receiveAmount,
   receiveCurrency,
+  chain,
   onConfirm,
   onCancel,
 }: Props) {
@@ -46,6 +48,7 @@ export function RemittanceQuoteCard({
         <div>
           <p className="text-xs text-cowry-muted mb-1">You pay</p>
           <p className="text-lg font-bold text-white">{sendAmount} {sendToken}</p>
+          <p className="text-[11px] text-cowry-muted mt-0.5 capitalize">via {chain}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-cowry-muted mb-1">Recipient gets</p>

@@ -34,11 +34,23 @@ export default function SignInPage() {
     setError("");
     setResetting(true);
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({ email });
+      // shouldCreateUser: false — signInWithOtp defaults to silently creating
+      // a brand-new account for any email that doesn't exist yet, which is
+      // exactly wrong for "forgot password": without this, requesting a
+      // reset code for a made-up email quietly creates a ghost Supabase user
+      // instead of telling the person there's no account to reset.
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
+      });
       if (otpError) throw otpError;
       router.push(`/verify?email=${encodeURIComponent(email)}&flow=reset`);
     } catch (err) {
-      setError(getErrorMessage(err, "Could not send reset code"));
+      const message =
+        err && typeof err === "object" && (err as { code?: string }).code === "otp_disabled"
+          ? "No account found with that email."
+          : getErrorMessage(err, "Could not send reset code");
+      setError(message);
       setResetting(false);
     }
   };
