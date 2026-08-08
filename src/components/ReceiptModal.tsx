@@ -342,7 +342,7 @@ function DetailRow({ label, value, sub, mono }: { label: string; value: string; 
           {value}
         </span>
       </div>
-      {sub && <p className="text-right text-xs text-cowry-muted mt-0.5 truncate">{sub}</p>}
+      {sub && <p className="text-right text-xs text-cowry-muted mt-0.5 truncate leading-relaxed py-0.5">{sub}</p>}
     </div>
   );
 }
