@@ -37,3 +37,16 @@ export function describeSendState(state: string): StateBadge {
       return { label: "Processing", className: AMBER };
   }
 }
+
+export function describeCryptoWithdrawalState(state: string): StateBadge {
+  switch (state) {
+    case "CONFIRMED":
+      return { label: "Confirmed", className: GREEN };
+    case "BROADCAST":
+      return { label: "Broadcasting", className: AMBER };
+    case "FAILED":
+      return { label: "Failed", className: RED };
+    default:
+      return { label: "Processing", className: AMBER };
+  }
+}

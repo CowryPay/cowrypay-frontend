@@ -1,23 +1,21 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import {
-  getSend,
-  getSendReceipt,
+  getCryptoWithdrawal,
   getSolanaWallet,
   getStellarWallet,
-  type Send,
-  type SendReceipt,
+  type CryptoWithdrawal,
   type Wallet,
 } from "@/lib/backendApi";
-import { describeSendState } from "@/lib/txState";
+import { describeCryptoWithdrawalState } from "@/lib/txState";
 import { explorerUrlFor } from "@/lib/explorer";
-import { formatFiat, formatToken } from "@/lib/currency";
+import { formatToken } from "@/lib/currency";
 import { getErrorMessage } from "@/lib/errors";
 
 const CARD_BG = "#0B0B0B";
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 40;
-const STOP_POLLING_STATES = new Set(["COMPLETE", "FAILED", "SEND_REJECTED", "REFUNDED", "MANUAL_REVIEW"]);
+const STOP_POLLING_STATES = new Set(["CONFIRMED", "FAILED"]);
 
 const ZIGZAG_PATTERN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cpath d='M0 24L12 0L24 24L36 0L48 24' stroke='%2300D437' stroke-width='2' fill='none'/%3E%3C/svg%3E\")";
@@ -27,14 +25,13 @@ function shortenAddress(address: string): string {
 }
 
 type Props = {
-  sendId: string;
-  wallet: Wallet;
-  onClose: () => void;
+  withdrawalId: string;
+  wallet:       Wallet;
+  onClose:      () => void;
 };
 
-export function ReceiptModal({ sendId, wallet, onClose }: Props) {
-  const [send, setSend] = useState<Send | null>(null);
-  const [receipt, setReceipt] = useState<SendReceipt | null>(null);
+export function CryptoWithdrawalReceiptModal({ withdrawalId, wallet, onClose }: Props) {
+  const [withdrawal, setWithdrawal] = useState<CryptoWithdrawal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"download" | "share" | null>(null);
   const [senderAddress, setSenderAddress] = useState<string | null>(null);
@@ -47,21 +44,16 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
 
     async function poll() {
       try {
-        const { send: s } = await getSend(sendId);
+        const { withdrawal: w } = await getCryptoWithdrawal(withdrawalId);
         if (cancelled) return;
-        setSend(s);
+        setWithdrawal(w);
 
-        if (s.state === "COMPLETE") {
-          const { receipt: r } = await getSendReceipt(sendId);
-          if (!cancelled) setReceipt(r);
-          return;
-        }
-        if (STOP_POLLING_STATES.has(s.state) || pollsRef.current >= MAX_POLLS) return;
+        if (STOP_POLLING_STATES.has(w.state) || pollsRef.current >= MAX_POLLS) return;
 
         pollsRef.current += 1;
         timer = setTimeout(poll, POLL_INTERVAL_MS);
       } catch (e) {
-        if (!cancelled) setError(getErrorMessage(e, "Couldn't load this payment's status"));
+        if (!cancelled) setError(getErrorMessage(e, "Couldn't load this withdrawal's status"));
       }
     }
 
@@ -70,11 +62,11 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [sendId]);
+  }, [withdrawalId]);
 
   useEffect(() => {
-    if (!receipt) return;
-    const chain = receipt.chain.toLowerCase();
+    if (!withdrawal) return;
+    const chain = withdrawal.chain.toLowerCase();
     if (chain === "celo" || chain === "base" || chain === "optimism") {
       setSenderAddress(wallet.address);
       return;
@@ -90,11 +82,15 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [receipt, wallet.address]);
+  }, [withdrawal, wallet.address]);
 
-  const state = send?.state;
-  const badge = state ? describeSendState(state) : null;
-  const isFailed = state === "FAILED" || state === "SEND_REJECTED" || state === "REFUNDED";
+  const state = withdrawal?.state;
+  const badge = state ? describeCryptoWithdrawalState(state) : null;
+  const isFailed = state === "FAILED";
+  // A tx hash exists once broadcast — receipt is worth showing at that point,
+  // not just once fully confirmed (mirrors how ReceiptModal gates on COMPLETE,
+  // but this feature has no separate "confirmed" polling step before a hash exists).
+  const showReceipt = !!withdrawal && (state === "BROADCAST" || state === "CONFIRMED");
 
   const waitForImages = (el: HTMLElement): Promise<void> => {
     const images = Array.from(el.querySelectorAll("img"));
@@ -119,7 +115,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   };
 
   const handleDownload = async () => {
-    if (!receipt || exporting) return;
+    if (!withdrawal || exporting) return;
     setExporting("download");
     setError(null);
     try {
@@ -128,7 +124,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `cowrypay-receipt-${receipt.reference}-${Date.now()}.png`;
+      a.download = `cowrypay-withdrawal-${withdrawal.reference}-${Date.now()}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -141,13 +137,13 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   };
 
   const handleShare = async () => {
-    if (!receipt || exporting) return;
+    if (!withdrawal || exporting) return;
     setExporting("share");
     setError(null);
     try {
       const blob = await captureImage();
       const file = blob
-        ? new File([blob], `cowrypay-receipt-${receipt.reference}-${Date.now()}.png`, { type: "image/png" })
+        ? new File([blob], `cowrypay-withdrawal-${withdrawal.reference}-${Date.now()}.png`, { type: "image/png" })
         : null;
 
       if (file && navigator.canShare?.({ files: [file] })) {
@@ -157,7 +153,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
       if (navigator.share) {
         await navigator.share({
           title: "CowryPay Receipt",
-          text: `Sent ${formatToken(receipt.amountSent)} ${receipt.tokenSymbol} to ${receipt.recipient.accountName} — ref ${receipt.reference}`,
+          text: `Sent ${formatToken(withdrawal.amountHuman)} ${withdrawal.tokenSymbol} to ${shortenAddress(withdrawal.toAddress)} — ref ${withdrawal.reference}`,
         });
         return;
       }
@@ -199,7 +195,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
               </div>
             )}
 
-            {!receipt && (
+            {!showReceipt && (
               <div className="flex flex-col items-center text-center py-16">
                 <div
                   className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${
@@ -217,7 +213,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                   )}
                 </div>
                 <p className="text-base font-bold text-white">
-                  {isFailed ? "Payment didn't go through" : "Processing your payment"}
+                  {isFailed ? "Withdrawal didn't go through" : "Processing your withdrawal"}
                 </p>
                 {badge && (
                   <span className={`mt-2 text-[10px] font-medium rounded-full px-2.5 py-0.5 border ${badge.className}`}>
@@ -226,17 +222,13 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                 )}
                 <p className={`text-xs mt-4 leading-relaxed max-w-xs ${isFailed ? "text-red-400" : "text-cowry-muted"}`}>
                   {isFailed
-                    ? state === "REFUNDED"
-                      ? "This payment couldn't be delivered and was refunded to your balance."
-                      : "This payment failed. Check Transaction History for details, or try sending again."
-                    : state === "MANUAL_REVIEW"
-                      ? "This payment is under manual review — we'll notify you once it clears. Safe to close this and check back in Transaction History."
-                      : "This usually takes a few seconds. You can close this — it'll keep processing in the background."}
+                    ? "This withdrawal failed and your balance was refunded. Check Transaction History for details, or try again."
+                    : "This usually takes a few seconds. You can close this — it'll keep processing in the background."}
                 </p>
               </div>
             )}
 
-            {receipt && (
+            {showReceipt && withdrawal && (
               <>
                 <div
                   ref={receiptRef}
@@ -259,38 +251,35 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                     </div>
 
                     <p className="text-xs text-cowry-muted text-center mb-2">
-                      {new Date(receipt.completedAt).toLocaleDateString(undefined, {
+                      {new Date(withdrawal.updatedAt).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
                       })}
                       {" • "}
-                      {new Date(receipt.completedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(withdrawal.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </p>
 
                     <p className="text-3xl font-bold text-white text-center mb-1">
-                      {receipt.fiatAmountReceived != null
-                        ? formatFiat(receipt.fiatAmountReceived, receipt.fiatCurrency)
-                        : `${formatToken(receipt.amountSent)} ${receipt.tokenSymbol}`}
+                      {formatToken(withdrawal.amountHuman)} {withdrawal.tokenSymbol}
                     </p>
-                    <p className="text-sm font-semibold text-cowry-green text-center mb-7">Successful</p>
+                    <p className={`text-sm font-semibold text-center mb-7 ${state === "CONFIRMED" ? "text-cowry-green" : "text-amber-400"}`}>
+                      {badge?.label ?? "Processing"}
+                    </p>
 
                     <div className="space-y-5">
-                      <DetailRow
-                        label="RECIPIENT DETAILS"
-                        value={receipt.recipient.accountName}
-                        sub={`${receipt.recipient.institutionName} • ${receipt.recipient.accountIdentifierMasked}`}
-                      />
+                      <DetailRow label="DESTINATION" value={shortenAddress(withdrawal.toAddress)} mono />
                       {senderAddress && (
                         <DetailRow label="WALLET ADDRESS" value={shortenAddress(senderAddress)} mono />
                       )}
-                      <DetailRow label="NETWORK" value={receipt.chain.toUpperCase()} />
-                      <DetailRow label="YOU SENT" value={`${formatToken(receipt.amountSent)} ${receipt.tokenSymbol}`} />
+                      <DetailRow label="NETWORK" value={withdrawal.chain.toUpperCase()} />
+                      <DetailRow label="YOU SENT" value={`${formatToken(withdrawal.amountHuman)} ${withdrawal.tokenSymbol}`} />
+                      <DetailRow label="REFERENCE" value={withdrawal.reference} mono />
                     </div>
 
-                    {receipt.withdrawTxHash && explorerUrlFor(receipt.chain, receipt.withdrawTxHash) && (
+                    {withdrawal.withdrawTxHash && explorerUrlFor(withdrawal.chain, withdrawal.withdrawTxHash) && (
                       <a
-                        href={explorerUrlFor(receipt.chain, receipt.withdrawTxHash)!}
+                        href={explorerUrlFor(withdrawal.chain, withdrawal.withdrawTxHash)!}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block text-center text-xs text-cowry-green hover:text-cowry-mint font-medium mt-6"
@@ -330,20 +319,17 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   );
 }
 
-function DetailRow({ label, value, sub, mono }: { label: string; value: string; sub?: string; mono?: boolean }) {
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 leading-relaxed py-0.5">
-          {label}
-        </span>
-        <span
-          className={`text-right min-w-0 truncate font-semibold text-white leading-relaxed py-0.5 ${mono ? "font-mono text-xs" : "text-sm"}`}
-        >
-          {value}
-        </span>
-      </div>
-      {sub && <p className="text-right text-xs text-cowry-muted mt-0.5 truncate leading-relaxed py-0.5">{sub}</p>}
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 leading-relaxed py-0.5">
+        {label}
+      </span>
+      <span
+        className={`text-right min-w-0 truncate font-semibold text-white leading-relaxed py-0.5 ${mono ? "font-mono text-xs" : "text-sm"}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

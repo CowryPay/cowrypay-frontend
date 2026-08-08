@@ -18,6 +18,7 @@ import { ReceiptModal }       from "./ReceiptModal";
 import { NotificationBell }   from "./NotificationBell";
 import { AppLockScreen }      from "./AppLockScreen";
 import { DepositModal }       from "./DepositModal";
+import { WithdrawModal }      from "./WithdrawModal";
 import { hasLocalBiometricCredential } from "@/lib/biometric";
 import type { Message }       from "@/lib/types";
 
@@ -29,13 +30,14 @@ function formatDuration(totalSec: number): string {
 
 type Suggestion =
   | { kind: "text"; text: string; icon: string }
-  | { kind: "action"; text: string; icon: string; action: "cross-chain" | "tx-history" | "deposit" };
+  | { kind: "action"; text: string; icon: string; action: "cross-chain" | "tx-history" | "deposit" | "withdraw" };
 
 const SUGGESTIONS: Suggestion[] = [
   { kind: "action", text: "Deposit",                             icon: "/Vector%201.png", action: "deposit" },
   { kind: "text",   text: "Send $20 to mobile money in Kenya",   icon: "/Vector.png" },
   { kind: "text",   text: "What's my balance",                   icon: "/Vector%201.png" },
   { kind: "action", text: "Cross-chain send",                    icon: "/Vector%202.png", action: "cross-chain" },
+  { kind: "action", text: "Withdraw to wallet",                  icon: "/Vector%202.png", action: "withdraw" },
   { kind: "text",   text: "Send $50 to a bank account in Nigeria", icon: "/Vector.png" },
   { kind: "action", text: "Transaction History",                 icon: "/Group%209.png", action: "tx-history" },
 ];
@@ -52,6 +54,7 @@ export function ChatInterface() {
 
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositInitialChain, setDepositInitialChain] = useState<string | null>(null);
+  const [showWithdraw, setShowWithdraw] = useState(false);
 
   const {
     messages, loading, txLoading, send, stop, confirm, cancel, signAndSend, addBotMessage, bottomRef,
@@ -224,6 +227,7 @@ export function ChatInterface() {
                       if (s.action === "cross-chain") crossChainComingSoon();
                       else if (s.action === "tx-history") setShowTxHistory(true);
                       else if (s.action === "deposit") { setDepositInitialChain(null); setShowDeposit(true); }
+                      else if (s.action === "withdraw") setShowWithdraw(true);
                     } else {
                       setInput(s.text);
                       inputRef.current?.focus();
@@ -413,6 +417,10 @@ export function ChatInterface() {
           initialChain={depositInitialChain}
           onClose={() => { setShowDeposit(false); setDepositInitialChain(null); }}
         />
+      )}
+
+      {showWithdraw && wallet && (
+        <WithdrawModal wallet={wallet} onClose={() => setShowWithdraw(false)} />
       )}
 
       {locked && user && (

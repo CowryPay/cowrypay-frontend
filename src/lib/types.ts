@@ -91,20 +91,21 @@ export type ChatResponse =
       orderId: string;
     };
 
-/** A merged, display-ready entry from either a send or a deposit — powers Transaction History. */
+/** A merged, display-ready entry from a send, deposit, or crypto withdrawal — powers Transaction History. */
 export type TxHistoryItem = {
   id: string;
+  kind: "send" | "deposit" | "withdrawal";
   direction: "sent" | "received";
   amount: string;
   tokenSymbol: string;
-  /** Recipient name for a send, or the chain name for a deposit. */
+  /** Recipient name for a send, destination address for a withdrawal, or the chain name for a deposit. */
   counterparty: string;
   stateLabel: string;
   stateClassName: string;
   txHash: string | null;
   explorerUrl: string | null;
   timestamp: string;
-  /** True for a COMPLETE send — GET /offramp/sends/:id/receipt is available. */
+  /** True when a receipt view is available for this item (a COMPLETE send, or any crypto withdrawal). */
   hasReceipt?: boolean;
 };
 

@@ -327,3 +327,56 @@ export function createOfframpSend(input: {
 }> {
   return authedFetch("/offramp/sends", { method: "POST", body: JSON.stringify(input) });
 }
+
+// ── Crypto withdrawals (crypto → crypto, to any external address) ──────────
+
+export type CryptoWithdrawalState = "PENDING" | "BROADCAST" | "CONFIRMED" | "FAILED";
+
+export type CryptoWithdrawal = {
+  id:                 string;
+  userId:             string;
+  walletId:           string;
+  tokenSymbol:        string;
+  chain:              string;
+  amountHuman:        string;
+  toAddress:          string;
+  provider:           string;
+  reference:          string;
+  withdrawTxHash:     string | null;
+  withdrawConfirmedAt: string | null;
+  state:              CryptoWithdrawalState;
+  createdAt:          string;
+  updatedAt:          string;
+};
+
+export type CryptoWithdrawalTransition = {
+  toState:   CryptoWithdrawalState;
+  createdAt: string;
+};
+
+/**
+ * Direct on-chain withdrawal to a user-supplied address — no fiat, no fee,
+ * REST-only by design (never reachable via chat, since a wrong address here
+ * is unrecoverable money loss). The PIN is verified server-side inside this
+ * call, same as createOfframpSend.
+ */
+export function initiateCryptoWithdrawal(input: {
+  chain:     string;
+  amount:    string;
+  toAddress: string;
+  pin:       string;
+}): Promise<{ withdrawal: CryptoWithdrawal }> {
+  return authedFetch("/crypto-withdrawals", { method: "POST", body: JSON.stringify(input) });
+}
+
+/** Single crypto withdrawal lookup with its state-transition history. */
+export function getCryptoWithdrawal(
+  id: string,
+): Promise<{ withdrawal: CryptoWithdrawal; transitions: CryptoWithdrawalTransition[] }> {
+  return authedFetch(`/crypto-withdrawals/${id}`);
+}
+
+/** Recent crypto withdrawals for the signed-in user, newest first — powers Transaction History. */
+export function getCryptoWithdrawals(): Promise<{ withdrawals: CryptoWithdrawal[] }> {
+  return authedFetch("/crypto-withdrawals");
+}

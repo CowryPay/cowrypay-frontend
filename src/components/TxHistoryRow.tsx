@@ -13,7 +13,7 @@ function formatDate(iso: string): string {
 type Props = {
   tx: TxHistoryItem;
   showDate?: boolean;
-  onViewReceipt?: (sendId: string) => void;
+  onViewReceipt?: (tx: TxHistoryItem) => void;
 };
 
 export function TxHistoryRow({ tx, showDate = false, onViewReceipt }: Props) {
@@ -62,7 +62,7 @@ export function TxHistoryRow({ tx, showDate = false, onViewReceipt }: Props) {
         <div className="flex items-center gap-1 flex-shrink-0">
           {tx.hasReceipt && onViewReceipt && (
             <button
-              onClick={() => onViewReceipt(tx.id)}
+              onClick={() => onViewReceipt(tx)}
               title="View receipt"
               className="w-7 h-7 rounded-lg bg-cowry-darker border border-cowry-border hover:border-cowry-green/40 flex items-center justify-center transition-colors"
             >
@@ -92,7 +92,7 @@ export function TxHistoryRow({ tx, showDate = false, onViewReceipt }: Props) {
               href={tx.explorerUrl}
               target="_blank"
               rel="noopener noreferrer"
-              title="View on CeloScan"
+              title="View in explorer"
               className="w-7 h-7 rounded-lg bg-cowry-darker border border-cowry-border hover:border-cowry-green/40 flex items-center justify-center transition-colors"
             >
               <svg viewBox="0 0 24 24" className="w-3 h-3 fill-cowry-muted">

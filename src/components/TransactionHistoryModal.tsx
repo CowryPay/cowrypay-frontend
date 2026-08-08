@@ -1,18 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getSends, getDeposits } from "@/lib/backendApi";
-import { describeSendState, describeDepositState } from "@/lib/txState";
+import { getSends, getDeposits, getCryptoWithdrawals } from "@/lib/backendApi";
+import { describeSendState, describeDepositState, describeCryptoWithdrawalState } from "@/lib/txState";
+import { explorerUrlFor } from "@/lib/explorer";
+import { shortAddress } from "@/lib/wallet";
 import { useAuth } from "@/hooks/useAuth";
 import type { TxHistoryItem } from "@/lib/types";
 import { TxHistoryRow } from "./TxHistoryRow";
 import { ReceiptModal } from "./ReceiptModal";
+import { CryptoWithdrawalReceiptModal } from "./CryptoWithdrawalReceiptModal";
 
 interface Props {
   onClose: () => void;
-}
-
-function explorerUrl(txHash: string | null): string | null {
-  return txHash ? `https://celoscan.io/tx/${txHash}` : null;
 }
 
 function recipientLabel(recipient: { accountName: string; institutionName?: string }): string {
@@ -22,12 +21,17 @@ function recipientLabel(recipient: { accountName: string; institutionName?: stri
 }
 
 async function loadHistory(): Promise<TxHistoryItem[]> {
-  const [{ sends }, { deposits }] = await Promise.all([getSends(), getDeposits()]);
+  const [{ sends }, { deposits }, { withdrawals }] = await Promise.all([
+    getSends(),
+    getDeposits(),
+    getCryptoWithdrawals(),
+  ]);
 
   const sendItems: TxHistoryItem[] = sends.map((s) => {
     const { label, className } = describeSendState(s.state);
     return {
       id: s.id,
+      kind: "send",
       direction: "sent",
       amount: s.amountHuman,
       tokenSymbol: s.tokenSymbol,
@@ -35,7 +39,7 @@ async function loadHistory(): Promise<TxHistoryItem[]> {
       stateLabel: label,
       stateClassName: className,
       txHash: s.withdrawTxHash,
-      explorerUrl: explorerUrl(s.withdrawTxHash),
+      explorerUrl: explorerUrlFor(s.chain, s.withdrawTxHash),
       timestamp: s.createdAt,
       hasReceipt: s.state === "COMPLETE",
     };
@@ -45,6 +49,7 @@ async function loadHistory(): Promise<TxHistoryItem[]> {
     const { label, className } = describeDepositState(d.state);
     return {
       id: d.id,
+      kind: "deposit",
       direction: "received",
       amount: d.amount,
       tokenSymbol: d.tokenSymbol,
@@ -52,12 +57,30 @@ async function loadHistory(): Promise<TxHistoryItem[]> {
       stateLabel: label,
       stateClassName: className,
       txHash: d.txHash,
-      explorerUrl: explorerUrl(d.txHash),
+      explorerUrl: explorerUrlFor(d.chain, d.txHash),
       timestamp: d.createdAt,
     };
   });
 
-  return [...sendItems, ...depositItems].sort(
+  const withdrawalItems: TxHistoryItem[] = withdrawals.map((w) => {
+    const { label, className } = describeCryptoWithdrawalState(w.state);
+    return {
+      id: w.id,
+      kind: "withdrawal",
+      direction: "sent",
+      amount: w.amountHuman,
+      tokenSymbol: w.tokenSymbol,
+      counterparty: `${shortAddress(w.toAddress)} (${w.chain})`,
+      stateLabel: label,
+      stateClassName: className,
+      txHash: w.withdrawTxHash,
+      explorerUrl: explorerUrlFor(w.chain, w.withdrawTxHash),
+      timestamp: w.createdAt,
+      hasReceipt: true,
+    };
+  });
+
+  return [...sendItems, ...depositItems, ...withdrawalItems].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 }
@@ -68,6 +91,12 @@ export function TransactionHistoryModal({ onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [receiptSendId, setReceiptSendId] = useState<string | null>(null);
+  const [receiptWithdrawalId, setReceiptWithdrawalId] = useState<string | null>(null);
+
+  const handleViewReceipt = (tx: TxHistoryItem) => {
+    if (tx.kind === "withdrawal") setReceiptWithdrawalId(tx.id);
+    else setReceiptSendId(tx.id);
+  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -123,12 +152,12 @@ export function TransactionHistoryModal({ onClose }: Props) {
             </div>
           ) : items.length === 0 && !error ? (
             <p className="text-sm text-cowry-muted text-center py-16">
-              No sends or deposits yet.
+              No transactions yet.
             </p>
           ) : (
             <div className="divide-y divide-cowry-border">
               {items.map((tx) => (
-                <TxHistoryRow key={tx.id} tx={tx} showDate onViewReceipt={setReceiptSendId} />
+                <TxHistoryRow key={tx.id} tx={tx} showDate onViewReceipt={handleViewReceipt} />
               ))}
             </div>
           )}
@@ -137,6 +166,14 @@ export function TransactionHistoryModal({ onClose }: Props) {
 
       {receiptSendId && wallet && (
         <ReceiptModal sendId={receiptSendId} wallet={wallet} onClose={() => setReceiptSendId(null)} />
+      )}
+
+      {receiptWithdrawalId && wallet && (
+        <CryptoWithdrawalReceiptModal
+          withdrawalId={receiptWithdrawalId}
+          wallet={wallet}
+          onClose={() => setReceiptWithdrawalId(null)}
+        />
       )}
     </div>
   );
