@@ -338,7 +338,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                       </a>
                     )}
 
-                    <div className="flex items-center justify-center gap-1.5 mt-8">
+                    <div className="flex items-baseline justify-center gap-1.5 mt-8">
                       <span className="text-xs text-cowry-muted">Thank you for choosing</span>
                       {/* eslint-disable-next-line @next/next/no-img-element -- plain img, not next/image: html2canvas doesn't reliably capture next/image's lazy-loading wrapper */}
                       <img src="/CowryPay.png" alt="CowryPay" width={80} height={15} className="object-contain" />
