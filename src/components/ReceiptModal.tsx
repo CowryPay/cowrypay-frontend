@@ -387,23 +387,26 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   );
 }
 
-// items-center, not items-start, below — RECIPIENT DETAILS' value is two
-// lines (name + institution/account sub-line) while its label is one line;
-// top-aligning them left the single-line label looking too high against
-// the taller two-line block. Centering balances it against the full value
-// height instead — harmless for the other rows here, which are all
-// single-line on both sides anyway.
+// The label centers against the value's first line only (items-center on
+// a row that contains just those two) — RECIPIENT DETAILS' sub-line
+// (institution/account) sits below that row entirely, outside the
+// centering calculation, since centering the label against the *whole*
+// two-line block (name + sub) pulled it down past where it visually
+// belongs: next to the bold name specifically, not the midpoint of both
+// lines combined.
 function DetailRow({ label, value, sub, mono }: { label: string; value: string; sub?: string; mono?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      {/* Same leading-relaxed + py-0.5 as the value span below — both sides
-          need matching invisible space above their text, or items-start
-          (aligning box tops) ends up looking misaligned even though it's
-          technically doing its job: confirmed live, the label rendered
-          higher than the value once the value alone got the html2canvas
-          clipping fix's extra line-height. */}
-      <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 leading-relaxed py-0.5">{label}</span>
-      <span className="text-right min-w-0">
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        {/* Same leading-relaxed + py-0.5 as the value span below — both sides
+            need matching invisible space above their text, or centering
+            still looks slightly off even though it's technically correct:
+            confirmed live, the label rendered higher than the value once
+            the value alone got the html2canvas clipping fix's extra
+            line-height. */}
+        <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 leading-relaxed py-0.5">
+          {label}
+        </span>
         {/* leading-relaxed + a touch of vertical padding: html2canvas uses its
             own approximate font metrics, and without this the calculated
             line-box for bold text came out slightly short — confirmed live
@@ -411,12 +414,12 @@ function DetailRow({ label, value, sub, mono }: { label: string; value: string; 
             truncate's overflow:hidden, while the (non-bold) label text next
             to it rendered fine. */}
         <span
-          className={`block font-semibold text-white truncate leading-relaxed py-0.5 ${mono ? "font-mono text-xs" : "text-sm"}`}
+          className={`text-right min-w-0 truncate font-semibold text-white leading-relaxed py-0.5 ${mono ? "font-mono text-xs" : "text-sm"}`}
         >
           {value}
         </span>
-        {sub && <span className="block text-xs text-cowry-muted mt-0.5 truncate leading-relaxed py-0.5">{sub}</span>}
-      </span>
+      </div>
+      {sub && <p className="text-right text-xs text-cowry-muted mt-0.5 truncate">{sub}</p>}
     </div>
   );
 }
