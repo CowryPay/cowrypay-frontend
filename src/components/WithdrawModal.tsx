@@ -219,12 +219,20 @@ export function WithdrawModal({ wallet, onClose }: Props) {
                 <span className="text-sm font-semibold uppercase tracking-wide text-white">
                   Confirm Withdrawal
                 </span>
+                <span className="text-[11px] font-medium text-cowry-green bg-cowry-green/10 border border-cowry-green/40 rounded-full px-3 py-1">
+                  No fee
+                </span>
               </div>
 
-              <div className="mb-5">
-                <p className="text-xs text-cowry-muted mb-1">You send</p>
-                <p className="text-lg font-bold text-white">{amount} USDC</p>
-                <p className="text-[11px] text-cowry-muted mt-0.5">via {chainLabel}</p>
+              <div className="flex justify-between gap-4 mb-5">
+                <div>
+                  <p className="text-xs text-cowry-muted mb-1">You send</p>
+                  <p className="text-lg font-bold text-white">{amount} USDC</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-cowry-muted mb-1">Network</p>
+                  <p className="text-lg font-bold text-white">{chainLabel}</p>
+                </div>
               </div>
 
               <div className="mb-6">
