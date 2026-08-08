@@ -160,7 +160,11 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `cowrypay-receipt-${receipt.reference}.png`;
+      // Timestamped, not just the reference — some phones/gallery apps show
+      // a cached thumbnail for a filename that already exists rather than
+      // the freshly generated file, which would look like "nothing changed"
+      // even after a real fix.
+      a.download = `cowrypay-receipt-${receipt.reference}-${Date.now()}.png`;
       // Attached to the DOM before clicking — a detached element's .click()
       // is unreliable for triggering a download on some mobile browsers.
       document.body.appendChild(a);
@@ -180,7 +184,9 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
     setError(null);
     try {
       const blob = await captureImage();
-      const file = blob ? new File([blob], `cowrypay-receipt-${receipt.reference}.png`, { type: "image/png" }) : null;
+      const file = blob
+        ? new File([blob], `cowrypay-receipt-${receipt.reference}-${Date.now()}.png`, { type: "image/png" })
+        : null;
 
       if (file && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: "CowryPay Receipt" });
@@ -338,43 +344,20 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                       </a>
                     )}
 
-                    <div className="flex items-center justify-center gap-1.5 mt-8">
-                      <span className="text-xs text-cowry-muted">Thank you for choosing</span>
-                      {/* CSS background-image, not an <img> — both plain
-                          relative-offset and margin-top nudges rendered
-                          correctly in the live browser but were not
-                          reflected in the html2canvas-exported image
-                          (confirmed live, after a hard cache clear ruled out
-                          stale-bundle testing). A background-image's position
-                          is set directly at paint time via background-
-                          position, not derived from box-model/flex layout
-                          math the way an <img>'s offset is — much less
-                          exposed to html2canvas's layout-engine gaps. The
-                          logo's own visible letters sit slightly above its
-                          image's geometric center (asymmetric descender
-                          space for the "y" tails, confirmed via a pixel-row
-                          scan) — background-position's own offset corrects
-                          for that directly. */}
-                      <span
-                        role="img"
-                        aria-label="CowryPay"
-                        className="inline-block"
-                        style={{
-                          // Container is deliberately taller than the logo's
-                          // own rendered height (~15px at this width) — that
-                          // slack is what backgroundPosition has room to use.
-                          // Sizing backgroundSize to exactly match the
-                          // container (no slack at all) would make
-                          // backgroundPosition a no-op, which the first pass
-                          // at this got wrong.
-                          width: 80,
-                          height: 18,
-                          backgroundImage: "url('/CowryPay.png')",
-                          backgroundSize: "80px auto",
-                          backgroundPosition: "left bottom",
-                          backgroundRepeat: "no-repeat",
-                        }}
-                      />
+                    {/* Stacked, not side-by-side — three different inline-
+                        alignment techniques (relative offset, margin,
+                        background-position) all rendered correctly in the
+                        live browser but never carried into the
+                        html2canvas-exported image, confirmed live each time
+                        after a hard cache clear. Rather than keep fighting
+                        html2canvas's fidelity for one specific inline
+                        alignment, removing the need for it entirely: each
+                        line just centers independently, nothing needs to
+                        line up against anything else. */}
+                    <div className="text-center mt-8">
+                      <p className="text-xs text-cowry-muted mb-1.5">Thank you for choosing</p>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- plain img, not next/image: html2canvas doesn't reliably capture next/image's lazy-loading wrapper */}
+                      <img src="/CowryPay.png" alt="CowryPay" width={90} height={17} className="object-contain mx-auto" />
                     </div>
                   </div>
                 </div>
