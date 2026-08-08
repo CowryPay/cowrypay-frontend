@@ -7,7 +7,7 @@ import { VerifyPinModal } from "./VerifyPinModal";
 import { CryptoWithdrawalReceiptModal } from "./CryptoWithdrawalReceiptModal";
 
 type View = "picker" | "celo" | "base" | "optimism" | "solana" | "stellar";
-type Step = "form" | "pin" | "submitting" | "error";
+type Step = "form" | "confirm" | "pin" | "submitting" | "error";
 
 const EVM_CHAINS: { chain: "celo" | "base" | "optimism"; label: string }[] = [
   { chain: "celo",     label: "Celo" },
@@ -79,6 +79,10 @@ export function WithdrawModal({ wallet, onClose }: Props) {
     view === "stellar" ? "Stellar" :
     "Celo, Base & Optimism";
 
+  const chainLabel = chain
+    ? (EVM_CHAINS.find((c) => c.chain === chain)?.label ?? chain.charAt(0).toUpperCase() + chain.slice(1))
+    : "";
+
   if (withdrawalId) {
     return <CryptoWithdrawalReceiptModal withdrawalId={withdrawalId} wallet={wallet} onClose={onClose} />;
   }
@@ -142,10 +146,8 @@ export function WithdrawModal({ wallet, onClose }: Props) {
             </div>
           )}
 
-          {view !== "picker" && (step === "form" || step === "pin") && (
+          {view !== "picker" && step === "form" && (
             <div className="space-y-4">
-              <p className="text-xs text-cowry-muted -mt-1">No platform fee — you pay only network gas.</p>
-
               {(view === "celo" || view === "base" || view === "optimism") && multiChainEvm && (
                 <div>
                   <label className="text-[10px] text-cowry-muted mb-1 block">Chain</label>
@@ -200,7 +202,7 @@ export function WithdrawModal({ wallet, onClose }: Props) {
               )}
 
               <button
-                onClick={() => { setError(""); setStep("pin"); }}
+                onClick={() => { setError(""); setStep("confirm"); }}
                 disabled={!amountValid || !addressValid}
                 className="w-full py-3.5 rounded-full font-bold text-sm transition-all
                   bg-cowry-green text-black active:scale-95
@@ -208,6 +210,45 @@ export function WithdrawModal({ wallet, onClose }: Props) {
               >
                 Continue
               </button>
+            </div>
+          )}
+
+          {view !== "picker" && step === "confirm" && (
+            <div className="bg-cowry-dark border border-cowry-border rounded-2xl px-5 py-5">
+              <div className="flex items-center justify-between mb-5">
+                <span className="text-sm font-semibold uppercase tracking-wide text-white">
+                  Confirm Withdrawal
+                </span>
+              </div>
+
+              <div className="mb-5">
+                <p className="text-xs text-cowry-muted mb-1">You send</p>
+                <p className="text-lg font-bold text-white">{amount} USDC</p>
+                <p className="text-[11px] text-cowry-muted mt-0.5">via {chainLabel}</p>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-xs text-cowry-muted mb-1">To</p>
+                <p className="text-sm font-semibold text-white font-mono break-all">{address}</p>
+                {sendingToSelf && (
+                  <p className="text-[10px] text-amber-400 mt-1">⚠️ Sending to your own wallet</p>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep("pin")}
+                  className="flex-1 bg-cowry-green text-black text-sm font-bold py-3 rounded-full active:scale-95 transition-all"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => setStep("form")}
+                  className="flex-1 bg-transparent border border-cowry-green/60 text-white text-sm font-semibold py-3 rounded-full hover:border-cowry-green transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
 
@@ -225,7 +266,7 @@ export function WithdrawModal({ wallet, onClose }: Props) {
               <h3 className="text-base font-bold text-white">Withdrawal failed</h3>
               <p className="text-sm text-cowry-muted max-w-xs">{error}</p>
               <button
-                onClick={() => setStep("form")}
+                onClick={() => setStep("confirm")}
                 className="mt-2 text-sm text-cowry-green hover:text-cowry-mint font-medium transition-colors"
               >
                 Try again
@@ -236,7 +277,7 @@ export function WithdrawModal({ wallet, onClose }: Props) {
       </div>
 
       {step === "pin" && (
-        <VerifyPinModal onVerified={handlePinVerified} onClose={() => setStep("form")} />
+        <VerifyPinModal onVerified={handlePinVerified} onClose={() => setStep("confirm")} />
       )}
     </div>
   );
