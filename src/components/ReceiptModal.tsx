@@ -390,7 +390,13 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
 function DetailRow({ label, value, sub, mono }: { label: string; value: string; sub?: string; mono?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 pt-0.5">{label}</span>
+      {/* Same leading-relaxed + py-0.5 as the value span below — both sides
+          need matching invisible space above their text, or items-start
+          (aligning box tops) ends up looking misaligned even though it's
+          technically doing its job: confirmed live, the label rendered
+          higher than the value once the value alone got the html2canvas
+          clipping fix's extra line-height. */}
+      <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 leading-relaxed py-0.5">{label}</span>
       <span className="text-right min-w-0">
         {/* leading-relaxed + a touch of vertical padding: html2canvas uses its
             own approximate font metrics, and without this the calculated
