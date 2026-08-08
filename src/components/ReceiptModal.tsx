@@ -346,14 +346,18 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                           geometric center, since the transparent descender
                           space at the bottom (for the "y" tails) is larger
                           than the margin above the letters — confirmed via a
-                          pixel-row scan of the actual asset. No CSS alignment
-                          mode alone corrects for asymmetric padding like that. */}
+                          pixel-row scan of the actual asset. Uses margin, not
+                          a relative/top offset — confirmed live that
+                          html2canvas doesn't reliably respect position:
+                          relative shifts when exporting, even though the
+                          real browser renders them fine. Margin affects
+                          actual layout flow, which it does pick up. */}
                       <img
                         src="/CowryPay.png"
                         alt="CowryPay"
                         width={80}
                         height={15}
-                        className="object-contain relative top-[2px]"
+                        className="object-contain mt-[2px]"
                       />
                     </div>
                   </div>
