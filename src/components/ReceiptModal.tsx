@@ -340,24 +340,40 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
 
                     <div className="flex items-center justify-center gap-1.5 mt-8">
                       <span className="text-xs text-cowry-muted">Thank you for choosing</span>
-                      {/* eslint-disable-next-line @next/next/no-img-element -- plain img, not next/image: html2canvas doesn't reliably capture next/image's lazy-loading wrapper */}
-                      {/* Small manual nudge on top of items-center: the logo's
-                          visible letters sit slightly above the image's true
-                          geometric center, since the transparent descender
-                          space at the bottom (for the "y" tails) is larger
-                          than the margin above the letters — confirmed via a
-                          pixel-row scan of the actual asset. Uses margin, not
-                          a relative/top offset — confirmed live that
-                          html2canvas doesn't reliably respect position:
-                          relative shifts when exporting, even though the
-                          real browser renders them fine. Margin affects
-                          actual layout flow, which it does pick up. */}
-                      <img
-                        src="/CowryPay.png"
-                        alt="CowryPay"
-                        width={80}
-                        height={15}
-                        className="object-contain mt-[2px]"
+                      {/* CSS background-image, not an <img> — both plain
+                          relative-offset and margin-top nudges rendered
+                          correctly in the live browser but were not
+                          reflected in the html2canvas-exported image
+                          (confirmed live, after a hard cache clear ruled out
+                          stale-bundle testing). A background-image's position
+                          is set directly at paint time via background-
+                          position, not derived from box-model/flex layout
+                          math the way an <img>'s offset is — much less
+                          exposed to html2canvas's layout-engine gaps. The
+                          logo's own visible letters sit slightly above its
+                          image's geometric center (asymmetric descender
+                          space for the "y" tails, confirmed via a pixel-row
+                          scan) — background-position's own offset corrects
+                          for that directly. */}
+                      <span
+                        role="img"
+                        aria-label="CowryPay"
+                        className="inline-block"
+                        style={{
+                          // Container is deliberately taller than the logo's
+                          // own rendered height (~15px at this width) — that
+                          // slack is what backgroundPosition has room to use.
+                          // Sizing backgroundSize to exactly match the
+                          // container (no slack at all) would make
+                          // backgroundPosition a no-op, which the first pass
+                          // at this got wrong.
+                          width: 80,
+                          height: 18,
+                          backgroundImage: "url('/CowryPay.png')",
+                          backgroundSize: "80px auto",
+                          backgroundPosition: "left bottom",
+                          backgroundRepeat: "no-repeat",
+                        }}
                       />
                     </div>
                   </div>
