@@ -341,7 +341,20 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                     <div className="flex items-center justify-center gap-1.5 mt-8">
                       <span className="text-xs text-cowry-muted">Thank you for choosing</span>
                       {/* eslint-disable-next-line @next/next/no-img-element -- plain img, not next/image: html2canvas doesn't reliably capture next/image's lazy-loading wrapper */}
-                      <img src="/CowryPay.png" alt="CowryPay" width={80} height={15} className="object-contain" />
+                      {/* Small manual nudge on top of items-center: the logo's
+                          visible letters sit slightly above the image's true
+                          geometric center, since the transparent descender
+                          space at the bottom (for the "y" tails) is larger
+                          than the margin above the letters — confirmed via a
+                          pixel-row scan of the actual asset. No CSS alignment
+                          mode alone corrects for asymmetric padding like that. */}
+                      <img
+                        src="/CowryPay.png"
+                        alt="CowryPay"
+                        width={80}
+                        height={15}
+                        className="object-contain relative top-[2px]"
+                      />
                     </div>
                   </div>
                 </div>
