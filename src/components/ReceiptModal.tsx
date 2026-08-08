@@ -140,7 +140,11 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
       const a = document.createElement("a");
       a.href = url;
       a.download = `cowrypay-receipt-${receipt.reference}.png`;
+      // Attached to the DOM before clicking — a detached element's .click()
+      // is unreliable for triggering a download on some mobile browsers.
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (e) {
       setError(getErrorMessage(e, "Could not download the receipt"));
@@ -303,6 +307,11 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                         View on-chain transaction ↗
                       </a>
                     )}
+
+                    <div className="flex items-center justify-center gap-1.5 mt-8">
+                      <span className="text-xs text-cowry-muted">Thank you for choosing</span>
+                      <Image src="/CowryPay.png" alt="CowryPay" width={80} height={15} className="object-contain" />
+                    </div>
                   </div>
                 </div>
 
