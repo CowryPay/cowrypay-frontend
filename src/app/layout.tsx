@@ -29,7 +29,7 @@ export const viewport: Viewport = {
   maximumScale:     1,
   userScalable:     false,   // prevent accidental pinch-zoom
   viewportFit:      "cover", // respect notch / safe-area on all phones
-  themeColor:       "#0A0F1E",
+  themeColor:       "#0B0B0B",
   colorScheme:      "dark",
 };
 

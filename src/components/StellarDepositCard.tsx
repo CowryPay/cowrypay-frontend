@@ -52,15 +52,6 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/**
- * Stellar's deposit address is shared across every user — only the memo
- * distinguishes who a deposit belongs to. A deposit that lands without it
- * (or with the wrong one) is not recoverable, not just "delayed" — a real
- * mistake already made once in testing, not a hypothetical — so both fields
- * get equal visual weight and their own copy button, with an explicit
- * warning tying them together instead of the memo reading as optional
- * trivia, and wording that doesn't imply a manual fallback exists.
- */
 export function StellarDepositCard({ address, memo }: Props) {
   return (
     <div className="w-full space-y-3">

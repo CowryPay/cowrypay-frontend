@@ -2,10 +2,7 @@
 import { useState } from "react";
 import { QrCode } from "./QrCode";
 
-// Mirrors the backend's chain registry (backend/src/domain/wallets/chains.ts)
-// — a self-custody (aws-kms) wallet derives one address valid on every one
-// of these, so the same deposit address works across all of them, not just
-// `chain`. No endpoint exposes this list yet, so it's kept in sync by hand.
+// Mirrors the backend's chain registry (backend/src/domain/wallets/chains.ts).
 const SELF_CUSTODY_CHAINS = ["Celo", "Base", "Optimism"];
 
 type Props = {

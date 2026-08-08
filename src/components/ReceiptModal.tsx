@@ -13,20 +13,11 @@ import { describeSendState } from "@/lib/txState";
 import { formatFiat, formatToken } from "@/lib/currency";
 import { getErrorMessage } from "@/lib/errors";
 
-// The card background html2canvas renders onto — matches cowry-dark
-// (tailwind.config.ts) so the exported image isn't transparent/mismatched.
 const CARD_BG = "#0B0B0B";
-
 const POLL_INTERVAL_MS = 3000;
-const MAX_POLLS = 40; // ~2 minutes of active polling before we give up and let the user check back later
-
-// States a send can sit in for a while (or indefinitely) without us tightly
-// polling — MANUAL_REVIEW especially can take hours, not seconds.
+const MAX_POLLS = 40;
 const STOP_POLLING_STATES = new Set(["COMPLETE", "FAILED", "SEND_REJECTED", "REFUNDED", "MANUAL_REVIEW"]);
 
-// Subtle repeating chevron texture behind the amount, matching the branded
-// receipt reference design — an approximation (no exported asset), not a
-// pixel-perfect match.
 const ZIGZAG_PATTERN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cpath d='M0 24L12 0L24 24L36 0L48 24' stroke='%2300D437' stroke-width='2' fill='none'/%3E%3C/svg%3E\")";
 
@@ -36,19 +27,10 @@ function shortenAddress(address: string): string {
 
 type Props = {
   sendId: string;
-  /** The EVM wallet from useAuth — used for the "Wallet Address" field when the send used celo/base/optimism. */
   wallet: Wallet;
   onClose: () => void;
 };
 
-/**
- * Pops up right after a payment is submitted (like Cash App/Venmo's receipt
- * screen) and polls until the send settles, then shows the full branded
- * receipt (design matches the reference CowryPay receipt mockup — real data
- * only, e.g. the masked account number, not the mockup's placeholder full
- * number). Also reused from Transaction History for past COMPLETE sends,
- * where it resolves on the very first poll since the send is already done.
- */
 export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   const [send, setSend] = useState<Send | null>(null);
   const [receipt, setReceipt] = useState<SendReceipt | null>(null);
@@ -89,10 +71,6 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
     };
   }, [sendId]);
 
-  // The "Wallet Address" field is which of the user's own addresses this
-  // send actually paid out from — not part of the receipt API response, so
-  // resolved client-side from data we already have (EVM) or already fetch
-  // elsewhere (Solana/Stellar), rather than asking the backend for it.
   useEffect(() => {
     if (!receipt) return;
     const chain = receipt.chain.toLowerCase();
@@ -107,9 +85,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
       .then((w) => {
         if (!cancelled) setSenderAddress(w.address);
       })
-      .catch(() => {
-        // Best-effort — the rest of the receipt is still useful without this field.
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -117,16 +93,8 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
 
   const state = send?.state;
   const badge = state ? describeSendState(state) : null;
-  const isComplete = !!receipt;
   const isFailed = state === "FAILED" || state === "SEND_REJECTED" || state === "REFUNDED";
 
-  /**
-   * html2canvas snapshots whatever layout exists the instant it's called —
-   * if the logo <img>s haven't actually finished loading yet, it captures
-   * an incomplete/pre-reflow layout (confirmed live: cut-off text and a
-   * clipped logo). Waiting for every image in the card to actually load
-   * first is what fixes that, not just delaying by a fixed amount of time.
-   */
   const waitForImages = (el: HTMLElement): Promise<void> => {
     const images = Array.from(el.querySelectorAll("img"));
     return Promise.all(
@@ -141,7 +109,6 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
     ).then(() => undefined);
   };
 
-  /** Renders the receipt card (ref'd content) to a PNG blob — used by both download and share. */
   const captureImage = async (): Promise<Blob | null> => {
     if (!receiptRef.current) return null;
     await waitForImages(receiptRef.current);
@@ -160,13 +127,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      // Timestamped, not just the reference — some phones/gallery apps show
-      // a cached thumbnail for a filename that already exists rather than
-      // the freshly generated file, which would look like "nothing changed"
-      // even after a real fix.
       a.download = `cowrypay-receipt-${receipt.reference}-${Date.now()}.png`;
-      // Attached to the DOM before clicking — a detached element's .click()
-      // is unreliable for triggering a download on some mobile browsers.
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -199,10 +160,8 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
         });
         return;
       }
-      // No Web Share API (most desktop browsers) — download instead.
       await handleDownload();
     } catch (e) {
-      // The user cancelling the native share sheet throws AbortError — not a real error.
       if (e instanceof DOMException && e.name === "AbortError") return;
       setError(getErrorMessage(e, "Could not share the receipt"));
     } finally {
@@ -213,11 +172,6 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   return (
     <div
       className="absolute inset-0 z-[70] bg-cowry-dark flex flex-col"
-      // Stops every click here (buttons included) from bubbling up into an
-      // ancestor's own backdrop onClose — this is rendered as a child of
-      // TransactionHistoryModal's backdrop (onClick={onClose} there), and
-      // without this, tapping anywhere inside the receipt — Download/Share
-      // included — closed the history modal right along with it.
       onClick={(e) => e.stopPropagation()}
     >
       <div className="absolute inset-0 bg-glow-green pointer-events-none" />
@@ -298,7 +252,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
 
                   <div className="relative px-6 py-7">
                     <div className="flex items-center justify-between mb-7">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- plain img, not next/image: html2canvas doesn't reliably capture next/image's lazy-loading wrapper */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src="/CowryPay.png" alt="CowryPay" width={110} height={21} className="object-contain" />
                       <span className="text-xs text-cowry-muted">Transaction Receipt</span>
                     </div>
@@ -344,12 +298,6 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                       </a>
                     )}
 
-                    {/* Designer call: one logo per receipt is enough (the
-                        header already has it) — "CowryPay" here is styled
-                        text, not the image, so it's back to sitting on the
-                        same line as "Thank you for choosing" with none of
-                        the image-alignment/html2canvas issues that were
-                        never fully worth chasing for a second logo. */}
                     <p className="text-center text-xs text-cowry-muted mt-10 pb-1">
                       Thank you for choosing CowryPay
                     </p>
@@ -381,32 +329,13 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   );
 }
 
-// The label centers against the value's first line only (items-center on
-// a row that contains just those two) — RECIPIENT DETAILS' sub-line
-// (institution/account) sits below that row entirely, outside the
-// centering calculation, since centering the label against the *whole*
-// two-line block (name + sub) pulled it down past where it visually
-// belongs: next to the bold name specifically, not the midpoint of both
-// lines combined.
 function DetailRow({ label, value, sub, mono }: { label: string; value: string; sub?: string; mono?: boolean }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
-        {/* Same leading-relaxed + py-0.5 as the value span below — both sides
-            need matching invisible space above their text, or centering
-            still looks slightly off even though it's technically correct:
-            confirmed live, the label rendered higher than the value once
-            the value alone got the html2canvas clipping fix's extra
-            line-height. */}
         <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 leading-relaxed py-0.5">
           {label}
         </span>
-        {/* leading-relaxed + a touch of vertical padding: html2canvas uses its
-            own approximate font metrics, and without this the calculated
-            line-box for bold text came out slightly short — confirmed live
-            as the tops of these glyphs specifically getting clipped by
-            truncate's overflow:hidden, while the (non-bold) label text next
-            to it rendered fine. */}
         <span
           className={`text-right min-w-0 truncate font-semibold text-white leading-relaxed py-0.5 ${mono ? "font-mono text-xs" : "text-sm"}`}
         >

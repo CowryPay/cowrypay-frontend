@@ -19,14 +19,7 @@ function newSessionId(): string {
 /** Clear server pending state after this long without a user message. */
 const IDLE_RESET_MS = 20 * 60 * 1000;
 
-// Mirrors the backend's DEPOSIT_INTENT_RE + ADDRESS_RE + CHAIN_NAME_RE
-// (ai-agent/chat/intent.ts) — kept in sync by hand. Intercepted client-side
-// rather than sent to /chat so a deposit/address request opens DepositModal
-// (QR code, copy buttons, backed by the real GET /wallets/solana|stellar
-// endpoints) instead of getting the backend's plain-text reply, which has
-// no way to render a rich card. Two separate patterns, same as backend —
-// "I want to deposit" and "what's my address" are phrased differently but
-// mean the same thing here.
+// Mirrors the backend's DEPOSIT_INTENT_RE + ADDRESS_RE + CHAIN_NAME_RE (ai-agent/chat/intent.ts).
 const DEPOSIT_INTENT_RE = /\b(deposit|top ?up|fund my (wallet|account)|add (money|funds|usdc))\b/i;
 const ADDRESS_RE = /\b(deposit address|wallet address|my address|my wallet)\b/i;
 const CHAIN_NAME_RE = /\b(celo|base|optimism|stellar|solana)\b/i;

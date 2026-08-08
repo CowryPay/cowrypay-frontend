@@ -6,17 +6,6 @@ type Props = {
   size?: number;
 };
 
-/**
- * QR code for a deposit address — matches the standard exchange pattern
- * (Bybit/Binance/etc.): scannable code above, copyable text below. Encodes
- * the plain address only (not a chain-specific URI scheme, and never the
- * memo) since scan-to-fill support for those isn't reliable across wallets
- * — same reason exchanges show memo/tag as separate copyable text rather
- * than folding it into the code.
- *
- * `qrcode` is dynamically imported so it's not part of the main bundle,
- * only loaded when a deposit card actually renders one.
- */
 export function QrCode({ value, size = 160 }: Props) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
