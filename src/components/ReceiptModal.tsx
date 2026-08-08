@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import {
   getSend,
   getSendReceipt,
@@ -121,9 +120,31 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   const isComplete = !!receipt;
   const isFailed = state === "FAILED" || state === "SEND_REJECTED" || state === "REFUNDED";
 
+  /**
+   * html2canvas snapshots whatever layout exists the instant it's called —
+   * if the logo <img>s haven't actually finished loading yet, it captures
+   * an incomplete/pre-reflow layout (confirmed live: cut-off text and a
+   * clipped logo). Waiting for every image in the card to actually load
+   * first is what fixes that, not just delaying by a fixed amount of time.
+   */
+  const waitForImages = (el: HTMLElement): Promise<void> => {
+    const images = Array.from(el.querySelectorAll("img"));
+    return Promise.all(
+      images.map((img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              img.addEventListener("load", () => resolve(), { once: true });
+              img.addEventListener("error", () => resolve(), { once: true });
+            }),
+      ),
+    ).then(() => undefined);
+  };
+
   /** Renders the receipt card (ref'd content) to a PNG blob — used by both download and share. */
   const captureImage = async (): Promise<Blob | null> => {
     if (!receiptRef.current) return null;
+    await waitForImages(receiptRef.current);
     const html2canvas = (await import("html2canvas")).default;
     const canvas = await html2canvas(receiptRef.current, { backgroundColor: CARD_BG, scale: 2 });
     return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
@@ -271,7 +292,8 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
 
                   <div className="relative px-6 py-7">
                     <div className="flex items-center justify-between mb-7">
-                      <Image src="/CowryPay.png" alt="CowryPay" width={110} height={21} className="object-contain" />
+                      {/* eslint-disable-next-line @next/next/no-img-element -- plain img, not next/image: html2canvas doesn't reliably capture next/image's lazy-loading wrapper */}
+                      <img src="/CowryPay.png" alt="CowryPay" width={110} height={21} className="object-contain" />
                       <span className="text-xs text-cowry-muted">Transaction Receipt</span>
                     </div>
 
@@ -318,7 +340,8 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
 
                     <div className="flex items-center justify-center gap-1.5 mt-8">
                       <span className="text-xs text-cowry-muted">Thank you for choosing</span>
-                      <Image src="/CowryPay.png" alt="CowryPay" width={80} height={15} className="object-contain" />
+                      {/* eslint-disable-next-line @next/next/no-img-element -- plain img, not next/image: html2canvas doesn't reliably capture next/image's lazy-loading wrapper */}
+                      <img src="/CowryPay.png" alt="CowryPay" width={80} height={15} className="object-contain" />
                     </div>
                   </div>
                 </div>
