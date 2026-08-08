@@ -351,10 +351,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                         the image-alignment/html2canvas issues that were
                         never fully worth chasing for a second logo. */}
                     <p className="text-center text-xs text-cowry-muted mt-10 pb-1">
-                      Thank you for choosing{" "}
-                      <span className="font-bold text-white">
-                        Cowry<span className="text-cowry-green">Pay</span>
-                      </span>
+                      Thank you for choosing CowryPay
                     </p>
                   </div>
                 </div>
