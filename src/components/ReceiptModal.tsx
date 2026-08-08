@@ -114,7 +114,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
     if (!receiptRef.current) return null;
     await waitForImages(receiptRef.current);
     const html2canvas = (await import("html2canvas")).default;
-    const canvas = await html2canvas(receiptRef.current, { backgroundColor: CARD_BG, scale: 2 });
+    const canvas = await html2canvas(receiptRef.current, { backgroundColor: CARD_BG, scale: 2, useCORS: true });
     return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
   };
 
@@ -254,7 +254,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                   <div className="relative px-6 py-7">
                     <div className="flex items-center justify-between mb-7">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/CowryPay.png" alt="CowryPay" width={110} height={21} className="object-contain" />
+                      <img src="/CowryPay.png" alt="CowryPay" width={110} height={21} className="object-contain" crossOrigin="anonymous" />
                       <span className="text-xs text-cowry-muted">Transaction Receipt</span>
                     </div>
 
