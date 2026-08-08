@@ -344,21 +344,18 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                       </a>
                     )}
 
-                    {/* Stacked, not side-by-side — three different inline-
-                        alignment techniques (relative offset, margin,
-                        background-position) all rendered correctly in the
-                        live browser but never carried into the
-                        html2canvas-exported image, confirmed live each time
-                        after a hard cache clear. Rather than keep fighting
-                        html2canvas's fidelity for one specific inline
-                        alignment, removing the need for it entirely: each
-                        line just centers independently, nothing needs to
-                        line up against anything else. */}
-                    <div className="text-center mt-10 pb-1">
-                      <p className="text-xs text-cowry-muted mb-2.5">Thank you for choosing</p>
-                      {/* eslint-disable-next-line @next/next/no-img-element -- plain img, not next/image: html2canvas doesn't reliably capture next/image's lazy-loading wrapper */}
-                      <img src="/CowryPay.png" alt="CowryPay" width={90} height={17} className="object-contain mx-auto" />
-                    </div>
+                    {/* Designer call: one logo per receipt is enough (the
+                        header already has it) — "CowryPay" here is styled
+                        text, not the image, so it's back to sitting on the
+                        same line as "Thank you for choosing" with none of
+                        the image-alignment/html2canvas issues that were
+                        never fully worth chasing for a second logo. */}
+                    <p className="text-center text-xs text-cowry-muted mt-10 pb-1">
+                      Thank you for choosing{" "}
+                      <span className="font-bold text-white">
+                        Cowry<span className="text-cowry-green">Pay</span>
+                      </span>
+                    </p>
                   </div>
                 </div>
 
