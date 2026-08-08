@@ -387,9 +387,15 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   );
 }
 
+// items-center, not items-start, below — RECIPIENT DETAILS' value is two
+// lines (name + institution/account sub-line) while its label is one line;
+// top-aligning them left the single-line label looking too high against
+// the taller two-line block. Centering balances it against the full value
+// height instead — harmless for the other rows here, which are all
+// single-line on both sides anyway.
 function DetailRow({ label, value, sub, mono }: { label: string; value: string; sub?: string; mono?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex items-center justify-between gap-3">
       {/* Same leading-relaxed + py-0.5 as the value span below — both sides
           need matching invisible space above their text, or items-start
           (aligning box tops) ends up looking misaligned even though it's
