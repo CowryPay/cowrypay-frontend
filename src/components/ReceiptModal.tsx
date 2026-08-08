@@ -376,10 +376,18 @@ function DetailRow({ label, value, sub, mono }: { label: string; value: string; 
     <div className="flex items-start justify-between gap-3">
       <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 pt-0.5">{label}</span>
       <span className="text-right min-w-0">
-        <span className={`block font-semibold text-white truncate ${mono ? "font-mono text-xs" : "text-sm"}`}>
+        {/* leading-relaxed + a touch of vertical padding: html2canvas uses its
+            own approximate font metrics, and without this the calculated
+            line-box for bold text came out slightly short — confirmed live
+            as the tops of these glyphs specifically getting clipped by
+            truncate's overflow:hidden, while the (non-bold) label text next
+            to it rendered fine. */}
+        <span
+          className={`block font-semibold text-white truncate leading-relaxed py-0.5 ${mono ? "font-mono text-xs" : "text-sm"}`}
+        >
           {value}
         </span>
-        {sub && <span className="block text-xs text-cowry-muted mt-0.5 truncate">{sub}</span>}
+        {sub && <span className="block text-xs text-cowry-muted mt-0.5 truncate leading-relaxed py-0.5">{sub}</span>}
       </span>
     </div>
   );
