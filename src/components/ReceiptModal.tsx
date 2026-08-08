@@ -184,7 +184,15 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   };
 
   return (
-    <div className="absolute inset-0 z-[70] bg-cowry-dark flex flex-col">
+    <div
+      className="absolute inset-0 z-[70] bg-cowry-dark flex flex-col"
+      // Stops every click here (buttons included) from bubbling up into an
+      // ancestor's own backdrop onClose — this is rendered as a child of
+      // TransactionHistoryModal's backdrop (onClick={onClose} there), and
+      // without this, tapping anywhere inside the receipt — Download/Share
+      // included — closed the history modal right along with it.
+      onClick={(e) => e.stopPropagation()}
+    >
       <div className="absolute inset-0 bg-glow-green pointer-events-none" />
 
       <div className="relative flex flex-col h-full w-full overflow-x-hidden">
