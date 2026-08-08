@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { getSends, getDeposits } from "@/lib/backendApi";
 import { describeSendState, describeDepositState } from "@/lib/txState";
+import { useAuth } from "@/hooks/useAuth";
 import type { TxHistoryItem } from "@/lib/types";
 import { TxHistoryRow } from "./TxHistoryRow";
 import { ReceiptModal } from "./ReceiptModal";
@@ -62,6 +63,7 @@ async function loadHistory(): Promise<TxHistoryItem[]> {
 }
 
 export function TransactionHistoryModal({ onClose }: Props) {
+  const { wallet } = useAuth();
   const [items, setItems] = useState<TxHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -133,8 +135,8 @@ export function TransactionHistoryModal({ onClose }: Props) {
         </div>
       </div>
 
-      {receiptSendId && (
-        <ReceiptModal sendId={receiptSendId} onClose={() => setReceiptSendId(null)} />
+      {receiptSendId && wallet && (
+        <ReceiptModal sendId={receiptSendId} wallet={wallet} onClose={() => setReceiptSendId(null)} />
       )}
     </div>
   );

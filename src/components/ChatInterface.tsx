@@ -403,8 +403,8 @@ export function ChatInterface() {
         <VerifyPinModal onClose={closePinVerify} onVerified={onPinVerified} />
       )}
 
-      {receiptSendId && (
-        <ReceiptModal sendId={receiptSendId} onClose={closeReceipt} />
+      {receiptSendId && wallet && (
+        <ReceiptModal sendId={receiptSendId} wallet={wallet} onClose={closeReceipt} />
       )}
 
       {showDeposit && wallet && (

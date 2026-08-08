@@ -1,7 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { getSend, getSendReceipt, type Send, type SendReceipt } from "@/lib/backendApi";
+import {
+  getSend,
+  getSendReceipt,
+  getSolanaWallet,
+  getStellarWallet,
+  type Send,
+  type SendReceipt,
+  type Wallet,
+} from "@/lib/backendApi";
 import { describeSendState } from "@/lib/txState";
 import { formatFiat, formatToken } from "@/lib/currency";
 import { getErrorMessage } from "@/lib/errors";
@@ -17,22 +25,37 @@ const MAX_POLLS = 40; // ~2 minutes of active polling before we give up and let 
 // polling — MANUAL_REVIEW especially can take hours, not seconds.
 const STOP_POLLING_STATES = new Set(["COMPLETE", "FAILED", "SEND_REJECTED", "REFUNDED", "MANUAL_REVIEW"]);
 
+// Subtle repeating chevron texture behind the amount, matching the branded
+// receipt reference design — an approximation (no exported asset), not a
+// pixel-perfect match.
+const ZIGZAG_PATTERN =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cpath d='M0 24L12 0L24 24L36 0L48 24' stroke='%2300D437' stroke-width='2' fill='none'/%3E%3C/svg%3E\")";
+
+function shortenAddress(address: string): string {
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
 type Props = {
   sendId: string;
+  /** The EVM wallet from useAuth — used for the "Wallet Address" field when the send used celo/base/optimism. */
+  wallet: Wallet;
   onClose: () => void;
 };
 
 /**
  * Pops up right after a payment is submitted (like Cash App/Venmo's receipt
- * screen) and polls until the send settles, then shows the full receipt.
- * Also reused from Transaction History for past COMPLETE sends, where it
- * resolves on the very first poll since the send is already done.
+ * screen) and polls until the send settles, then shows the full branded
+ * receipt (design matches the reference CowryPay receipt mockup — real data
+ * only, e.g. the masked account number, not the mockup's placeholder full
+ * number). Also reused from Transaction History for past COMPLETE sends,
+ * where it resolves on the very first poll since the send is already done.
  */
-export function ReceiptModal({ sendId, onClose }: Props) {
+export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   const [send, setSend] = useState<Send | null>(null);
   const [receipt, setReceipt] = useState<SendReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"download" | "share" | null>(null);
+  const [senderAddress, setSenderAddress] = useState<string | null>(null);
   const pollsRef = useRef(0);
   const receiptRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +89,32 @@ export function ReceiptModal({ sendId, onClose }: Props) {
       if (timer) clearTimeout(timer);
     };
   }, [sendId]);
+
+  // The "Wallet Address" field is which of the user's own addresses this
+  // send actually paid out from — not part of the receipt API response, so
+  // resolved client-side from data we already have (EVM) or already fetch
+  // elsewhere (Solana/Stellar), rather than asking the backend for it.
+  useEffect(() => {
+    if (!receipt) return;
+    const chain = receipt.chain.toLowerCase();
+    if (chain === "celo" || chain === "base" || chain === "optimism") {
+      setSenderAddress(wallet.address);
+      return;
+    }
+    const fetcher = chain === "solana" ? getSolanaWallet : chain === "stellar" ? getStellarWallet : null;
+    if (!fetcher) return;
+    let cancelled = false;
+    fetcher()
+      .then((w) => {
+        if (!cancelled) setSenderAddress(w.address);
+      })
+      .catch(() => {
+        // Best-effort — the rest of the receipt is still useful without this field.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [receipt, wallet.address]);
 
   const state = send?.state;
   const badge = state ? describeSendState(state) : null;
@@ -131,158 +180,167 @@ export function ReceiptModal({ sendId, onClose }: Props) {
   };
 
   return (
-    <div
-      className="absolute inset-0 z-[70] flex flex-col justify-end lg:items-center lg:justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="bg-cowry-dark border-t lg:border border-cowry-border rounded-t-3xl lg:rounded-3xl overflow-hidden max-h-[88vh] lg:max-w-md lg:w-full lg:mx-4 lg:shadow-2xl flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex-shrink-0 px-4 pt-3 pb-3 border-b border-cowry-border">
-          <div className="w-10 h-1 bg-cowry-border rounded-full mx-auto mb-3 lg:hidden" />
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white">Receipt</h2>
-            <button onClick={onClose} className="text-cowry-muted hover:text-white text-xs px-2 py-1 transition-colors">
-              Close
-            </button>
-          </div>
-        </div>
+    <div className="absolute inset-0 z-[70] bg-cowry-dark flex flex-col">
+      <div className="absolute inset-0 bg-glow-green pointer-events-none" />
 
-        <div className="overflow-y-auto flex-1 px-5 py-6">
-          {error && (
-            <div className="mb-4 px-3 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl">
-              {error}
-            </div>
-          )}
-
-          <div ref={receiptRef} className="bg-cowry-dark">
-          <div className="flex flex-col items-center text-center mb-6">
-            <div
-              className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${
-                isComplete
-                  ? "bg-cowry-green/15 border border-cowry-green/40"
-                  : isFailed
-                    ? "bg-red-500/10 border border-red-500/30"
-                    : "bg-amber-500/10 border border-amber-500/30"
-              }`}
-            >
-              {isComplete ? (
-                <svg viewBox="0 0 24 24" className="w-7 h-7 fill-cowry-green">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                </svg>
-              ) : isFailed ? (
-                <svg viewBox="0 0 24 24" className="w-7 h-7 fill-red-400">
-                  <path d="M18.3 5.71L12 12.01l-6.3-6.3-1.42 1.42 6.3 6.3-6.3 6.3 1.42 1.42 6.3-6.3 6.3 6.3 1.42-1.42-6.3-6.3 6.3-6.3z" />
-                </svg>
-              ) : (
-                <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-              )}
-            </div>
-            <p className="text-base font-bold text-white">
-              {isComplete ? "Payment delivered" : isFailed ? "Payment didn't go through" : "Processing your payment"}
-            </p>
-            {badge && (
-              <span className={`mt-2 text-[10px] font-medium rounded-full px-2.5 py-0.5 border ${badge.className}`}>
-                {badge.label}
-              </span>
-            )}
-          </div>
-
-          {!receipt && !isFailed && (
-            <p className="text-xs text-cowry-muted text-center leading-relaxed">
-              {state === "MANUAL_REVIEW"
-                ? "This payment is under manual review — we'll notify you once it clears. Safe to close this and check back in Transaction History."
-                : "This usually takes a few seconds. You can close this — it'll keep processing in the background."}
-            </p>
-          )}
-
-          {!receipt && isFailed && (
-            <p className="text-xs text-red-400 text-center leading-relaxed">
-              {state === "REFUNDED"
-                ? "This payment couldn't be delivered and was refunded to your balance."
-                : "This payment failed. Check Transaction History for details, or try sending again."}
-            </p>
-          )}
-
-          {receipt && (
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-white">
-                  {receipt.fiatAmountReceived != null
-                    ? formatFiat(receipt.fiatAmountReceived, receipt.fiatCurrency)
-                    : `${formatToken(receipt.amountSent)} ${receipt.tokenSymbol}`}
-                </p>
-                <p className="text-xs text-cowry-muted mt-1">
-                  to {receipt.recipient.accountName} ({receipt.recipient.institutionName})
-                </p>
-              </div>
-
-              <div className="bg-cowry-card border border-cowry-border rounded-2xl divide-y divide-cowry-border">
-                <Row label="Reference" value={receipt.reference} mono />
-                <Row label="You sent" value={`${formatToken(receipt.amountSent)} ${receipt.tokenSymbol}`} />
-                <Row label="Fee" value={`${formatToken(receipt.feeAmount)} ${receipt.tokenSymbol}`} />
-                <Row label="Network" value={receipt.chain.charAt(0).toUpperCase() + receipt.chain.slice(1)} />
-                <Row label="To account" value={receipt.recipient.accountIdentifierMasked} mono />
-                <Row label="Sent" value={new Date(receipt.createdAt).toLocaleString()} />
-                <Row label="Completed" value={new Date(receipt.completedAt).toLocaleString()} />
-              </div>
-
-              {receipt.withdrawTxHash && (
-                <a
-                  href={`https://celoscan.io/tx/${receipt.withdrawTxHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-center text-xs text-cowry-green hover:text-cowry-mint font-medium"
-                >
-                  View on-chain transaction ↗
-                </a>
-              )}
-
-              <div className="flex items-center justify-center gap-2 pt-3 border-t border-cowry-border">
-                <span className="text-xs text-cowry-muted">Executed by</span>
-                <Image src="/CowryPay.png" alt="CowryPay" width={90} height={17} className="object-contain" />
-              </div>
-            </div>
-          )}
-          </div>
-
-          {receipt && (
-            <div className="flex gap-2 mt-6">
-              <button
-                onClick={handleDownload}
-                disabled={!!exporting}
-                className="flex-1 flex items-center justify-center gap-1.5 bg-transparent border border-cowry-green/60 text-white text-sm font-semibold py-2.5 rounded-full hover:border-cowry-green transition-all disabled:opacity-50"
-              >
-                {exporting === "download" ? "Saving…" : "Download"}
-              </button>
-              <button
-                onClick={handleShare}
-                disabled={!!exporting}
-                className="flex-1 flex items-center justify-center gap-1.5 bg-transparent border border-cowry-green/60 text-white text-sm font-semibold py-2.5 rounded-full hover:border-cowry-green transition-all disabled:opacity-50"
-              >
-                {exporting === "share" ? "Sharing…" : "Share"}
-              </button>
-            </div>
-          )}
-
+      <div className="relative flex flex-col h-full w-full overflow-x-hidden">
+        <div className="flex-shrink-0 px-4 lg:px-10 py-4 border-b border-cowry-border flex items-center gap-3">
           <button
             onClick={onClose}
-            className="w-full mt-3 bg-cowry-green text-black text-sm font-bold py-2.5 rounded-full active:scale-95 transition-all"
+            aria-label="Back"
+            className="text-white hover:text-cowry-green transition-colors -ml-1 p-1"
           >
-            Done
+            <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current stroke-2">
+              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
+          <h2 className="text-lg font-bold text-white">View Transaction</h2>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-4 lg:px-10 py-6">
+          <div className="lg:max-w-md lg:mx-auto">
+            {error && (
+              <div className="mb-4 px-3 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl">
+                {error}
+              </div>
+            )}
+
+            {!receipt && (
+              <div className="flex flex-col items-center text-center py-16">
+                <div
+                  className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${
+                    isFailed
+                      ? "bg-red-500/10 border border-red-500/30"
+                      : "bg-amber-500/10 border border-amber-500/30"
+                  }`}
+                >
+                  {isFailed ? (
+                    <svg viewBox="0 0 24 24" className="w-7 h-7 fill-red-400">
+                      <path d="M18.3 5.71L12 12.01l-6.3-6.3-1.42 1.42 6.3 6.3-6.3 6.3 1.42 1.42 6.3-6.3 6.3 6.3 1.42-1.42-6.3-6.3 6.3-6.3z" />
+                    </svg>
+                  ) : (
+                    <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                  )}
+                </div>
+                <p className="text-base font-bold text-white">
+                  {isFailed ? "Payment didn't go through" : "Processing your payment"}
+                </p>
+                {badge && (
+                  <span className={`mt-2 text-[10px] font-medium rounded-full px-2.5 py-0.5 border ${badge.className}`}>
+                    {badge.label}
+                  </span>
+                )}
+                <p className={`text-xs mt-4 leading-relaxed max-w-xs ${isFailed ? "text-red-400" : "text-cowry-muted"}`}>
+                  {isFailed
+                    ? state === "REFUNDED"
+                      ? "This payment couldn't be delivered and was refunded to your balance."
+                      : "This payment failed. Check Transaction History for details, or try sending again."
+                    : state === "MANUAL_REVIEW"
+                      ? "This payment is under manual review — we'll notify you once it clears. Safe to close this and check back in Transaction History."
+                      : "This usually takes a few seconds. You can close this — it'll keep processing in the background."}
+                </p>
+              </div>
+            )}
+
+            {receipt && (
+              <>
+                <div
+                  ref={receiptRef}
+                  className="relative overflow-hidden rounded-3xl bg-cowry-dark border border-cowry-border"
+                >
+                  <div
+                    className="absolute inset-x-0 top-0 h-14 opacity-[0.08]"
+                    style={{ backgroundImage: ZIGZAG_PATTERN, backgroundRepeat: "repeat-x" }}
+                  />
+                  <div
+                    className="absolute inset-x-0 bottom-0 h-14 opacity-[0.08]"
+                    style={{ backgroundImage: ZIGZAG_PATTERN, backgroundRepeat: "repeat-x" }}
+                  />
+
+                  <div className="relative px-6 py-7">
+                    <div className="flex items-center justify-between mb-7">
+                      <Image src="/CowryPay.png" alt="CowryPay" width={110} height={21} className="object-contain" />
+                      <span className="text-xs text-cowry-muted">Transaction Receipt</span>
+                    </div>
+
+                    <p className="text-xs text-cowry-muted text-center mb-2">
+                      {new Date(receipt.completedAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                      {" • "}
+                      {new Date(receipt.completedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+
+                    <p className="text-3xl font-bold text-white text-center mb-1">
+                      {receipt.fiatAmountReceived != null
+                        ? formatFiat(receipt.fiatAmountReceived, receipt.fiatCurrency)
+                        : `${formatToken(receipt.amountSent)} ${receipt.tokenSymbol}`}
+                    </p>
+                    <p className="text-sm font-semibold text-cowry-green text-center mb-7">Successful</p>
+
+                    <div className="space-y-5">
+                      <DetailRow
+                        label="RECIPIENT DETAILS"
+                        value={receipt.recipient.accountName}
+                        sub={`${receipt.recipient.institutionName} • ${receipt.recipient.accountIdentifierMasked}`}
+                      />
+                      {senderAddress && (
+                        <DetailRow label="WALLET ADDRESS" value={shortenAddress(senderAddress)} mono />
+                      )}
+                      <DetailRow label="NETWORK" value={receipt.chain.toUpperCase()} />
+                      <DetailRow label="YOU SENT" value={`${formatToken(receipt.amountSent)} ${receipt.tokenSymbol}`} />
+                    </div>
+
+                    {receipt.withdrawTxHash && (
+                      <a
+                        href={`https://celoscan.io/tx/${receipt.withdrawTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-center text-xs text-cowry-green hover:text-cowry-mint font-medium mt-6"
+                      >
+                        View on-chain transaction ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-6">
+                  <button
+                    onClick={handleShare}
+                    disabled={!!exporting}
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-transparent border border-cowry-green/60 text-white text-sm font-semibold py-3 rounded-full hover:border-cowry-green transition-all disabled:opacity-50"
+                  >
+                    {exporting === "share" ? "Sharing…" : "Share as Image"}
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    disabled={!!exporting}
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-cowry-green text-black text-sm font-bold py-3 rounded-full active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {exporting === "download" ? "Saving…" : "Download Receipt"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function DetailRow({ label, value, sub, mono }: { label: string; value: string; sub?: string; mono?: boolean }) {
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 text-sm gap-3">
-      <span className="text-cowry-muted flex-shrink-0">{label}</span>
-      <span className={`font-semibold text-white text-right truncate ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 pt-0.5">{label}</span>
+      <span className="text-right min-w-0">
+        <span className={`block font-semibold text-white truncate ${mono ? "font-mono text-xs" : "text-sm"}`}>
+          {value}
+        </span>
+        {sub && <span className="block text-xs text-cowry-muted mt-0.5 truncate">{sub}</span>}
+      </span>
     </div>
   );
 }

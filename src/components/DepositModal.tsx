@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { getSolanaWallet, getStellarWallet, type Wallet } from "@/lib/backendApi";
 import { getErrorMessage } from "@/lib/errors";
+import { linkify } from "@/lib/linkify";
 import { DepositAddressCard } from "./DepositAddressCard";
 import { StellarDepositCard } from "./StellarDepositCard";
 
@@ -156,7 +157,11 @@ export function DepositModal({ wallet, initialChain, onClose }: Props) {
             <StellarDepositCard address={stellarWallet.address} memo={stellarWallet.memo} />
           )}
 
-          {error && <p className="text-red-400 text-sm text-center mt-4">{error}</p>}
+          {error && (
+            <p className="text-red-400 text-sm text-center mt-4">
+              {linkify(error, "text-cowry-green hover:text-cowry-mint underline")}
+            </p>
+          )}
         </div>
       </div>
     </div>
