@@ -231,7 +231,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                       : "This payment failed. Check Transaction History for details, or try sending again."
                     : state === "MANUAL_REVIEW"
                       ? "This payment is under manual review — we'll notify you once it clears. Safe to close this and check back in Transaction History."
-                      : "This usually takes a few seconds. You can close this — it'll keep processing in the background."}
+                      : "This usually takes a minute or two — bank settlement isn't instant. You can close this — it'll keep processing in the background."}
                 </p>
               </div>
             )}
