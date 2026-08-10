@@ -77,8 +77,6 @@ export type ChatResponse =
       feeLabel: string;
       /** Which chain this quote is locked to — worth surfacing once a wallet can hold balance on more than one. */
       chain: string;
-      /** Which provider this rate was actually locked with. */
-      provider: "paycrest" | "quidax";
     }
   | {
       /** On-ramp order created — shows virtual bank account for user to pay into. */

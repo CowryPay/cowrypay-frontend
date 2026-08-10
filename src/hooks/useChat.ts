@@ -129,7 +129,6 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
         rateLabel: `1 USDC ≈ ${pendingSend.rate} ${pendingSend.fiatCurrency}`,
         feeLabel: `${feeAmount} USDC`,
         chain: pendingSend.chain,
-        provider: pendingSend.provider,
       };
     }
     return { type: "info", message: reply };
