@@ -19,9 +19,15 @@ interface Props {
   ) => void;
   onViewAllTxHistory: () => void;
   txLoading:  boolean;
+  /** Reference of the one remittance quote still actionable — every other one in chat history is stale. */
+  activeQuoteReference: string | null;
+  /** True while a send is being confirmed (PIN open or in flight) — freezes the active quote card so it can't be double-tapped. */
+  sendPending: boolean;
 }
 
-export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove, onViewAllTxHistory, txLoading }: Props) {
+export function MessageBubble({
+  message, onConfirm, onCancel, onSign, onApprove, onViewAllTxHistory, txLoading, activeQuoteReference, sendPending,
+}: Props) {
   const isUser = message.role === "user";
   const r = message.response;
 
@@ -138,6 +144,7 @@ export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove,
             rateLabel={r.rateLabel}
             feeLabel={r.feeLabel}
             chain={r.chain}
+            disabled={r.reference !== activeQuoteReference || sendPending}
             onConfirm={onConfirm}
             onCancel={onCancel}
           />

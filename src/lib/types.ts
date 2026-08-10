@@ -77,6 +77,8 @@ export type ChatResponse =
       feeLabel: string;
       /** Which chain this quote is locked to — worth surfacing once a wallet can hold balance on more than one. */
       chain: string;
+      /** Identifies which specific draft this card represents — lets the UI tell a stale card (from earlier in the chat) apart from the one currently actionable. */
+      reference: string;
     }
   | {
       /** On-ramp order created — shows virtual bank account for user to pay into. */

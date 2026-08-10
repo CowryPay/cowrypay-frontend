@@ -58,7 +58,7 @@ export function ChatInterface() {
 
   const {
     messages, loading, txLoading, send, stop, confirm, cancel, signAndSend, addBotMessage, bottomRef,
-    pinVerifyOpen, closePinVerify, onPinVerified,
+    pinVerifyOpen, closePinVerify, onPinVerified, activeSendReference,
     receiptSendId, closeReceipt,
   } = useChat(user, (chain) => { setDepositInitialChain(chain); setShowDeposit(true); });
 
@@ -262,6 +262,8 @@ export function ChatInterface() {
             }
             onViewAllTxHistory={() => setShowTxHistory(true)}
             txLoading={txLoading}
+            activeQuoteReference={activeSendReference}
+            sendPending={loading || pinVerifyOpen}
           />
         ))}
 

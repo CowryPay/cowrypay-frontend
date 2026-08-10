@@ -33,6 +33,8 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
    */
   const [txLoading, setTxLoading] = useState(false);
   const [pinVerifyOpen, setPinVerifyOpen] = useState(false);
+  /** The one remittance quote card that's still actionable — every other one in chat history is stale and shouldn't respond to taps. */
+  const [activeSendReference, setActiveSendReference] = useState<string | null>(null);
   /** Set right after a send is submitted — opens the receipt modal, which polls until it settles. */
   const [receiptSendId, setReceiptSendId] = useState<string | null>(null);
   const sessionIdRef = useRef(newSessionId());
@@ -98,6 +100,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     const { reply, pendingSend } = await sendChatMessage(text, signal);
     if (pendingSend) {
       pendingSendRef.current = pendingSend;
+      setActiveSendReference(pendingSend.reference);
       const receiveAmount = (parseFloat(pendingSend.netAmount) * parseFloat(pendingSend.rate)).toFixed(2);
       const sendAmount = formatToken(pendingSend.amount);
       const feeAmount = formatToken(pendingSend.feeAmount);
@@ -129,6 +132,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
         rateLabel: `1 USDC ≈ ${pendingSend.rate} ${pendingSend.fiatCurrency}`,
         feeLabel: `${feeAmount} USDC`,
         chain: pendingSend.chain,
+        reference: pendingSend.reference,
       };
     }
     return { type: "info", message: reply };
@@ -244,6 +248,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
   /** Called when user taps Cancel on the send quote card. */
   const cancel = useCallback(() => {
     pendingSendRef.current = null;
+    setActiveSendReference(null);
     addMessage({ role: "bot", text: "Okay, cancelled." });
   }, [addMessage]);
 
@@ -285,6 +290,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
           },
         });
         pendingSendRef.current = null;
+        setActiveSendReference(null);
         setReceiptSendId(result.send.id);
         const orderId = result.send.id.slice(0, 8);
         addMessage({
@@ -452,6 +458,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     pinVerifyOpen,
     closePinVerify,
     onPinVerified,
+    activeSendReference,
     receiptSendId,
     closeReceipt,
   };

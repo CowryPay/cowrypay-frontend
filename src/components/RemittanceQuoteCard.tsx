@@ -11,6 +11,8 @@ type Props = {
   rateLabel:       string;
   feeLabel:        string;
   chain:           string;
+  /** True once this quote is no longer actionable — already confirmed/cancelled, superseded by a newer quote, or a send is currently in flight. */
+  disabled?:       boolean;
   onConfirm:       () => void;
   onCancel:        () => void;
 };
@@ -23,6 +25,7 @@ export function RemittanceQuoteCard({
   receiveAmount,
   receiveCurrency,
   chain,
+  disabled,
   onConfirm,
   onCancel,
 }: Props) {
@@ -64,12 +67,12 @@ export function RemittanceQuoteCard({
 
       {/* Actions */}
       <div className="flex gap-3">
-        <button onClick={onConfirm}
-          className="flex-1 bg-cowry-green text-black text-sm font-bold py-3 rounded-full active:scale-95 transition-all">
+        <button onClick={onConfirm} disabled={disabled}
+          className="flex-1 bg-cowry-green text-black text-sm font-bold py-3 rounded-full active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100">
           Confirm
         </button>
-        <button onClick={onCancel}
-          className="flex-1 bg-transparent border border-cowry-green/60 text-white text-sm font-semibold py-3 rounded-full hover:border-cowry-green transition-all">
+        <button onClick={onCancel} disabled={disabled}
+          className="flex-1 bg-transparent border border-cowry-green/60 text-white text-sm font-semibold py-3 rounded-full hover:border-cowry-green transition-all disabled:opacity-40 disabled:cursor-not-allowed">
           Cancel
         </button>
       </div>
