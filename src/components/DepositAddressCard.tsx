@@ -2,8 +2,12 @@
 import { useState } from "react";
 import { QrCode } from "./QrCode";
 
-// Mirrors the backend's chain registry (backend/src/domain/wallets/chains.ts).
-const SELF_CUSTODY_CHAINS = ["Celo", "Base", "Optimism"];
+// Mirrors the backend's DEPOSIT_CHAINS (ai-agent/chat/intent.ts) — which
+// chains are actually offered as a deposit destination, not the broader
+// SUPPORTED_CHAINS registry (Optimism dropped 2026-08: no off-ramp
+// provider settles sends there in practice, so depositing there would
+// strand funds).
+const SELF_CUSTODY_CHAINS = ["Celo", "Base"];
 
 type Props = {
   address:     string;

@@ -73,7 +73,7 @@ export function DepositModal({ wallet, initialChain, onClose }: Props) {
   }, []);
 
   const title =
-    view === "picker" ? "Deposit" : view === "evm" ? "Celo, Base & Optimism" : view === "solana" ? "Solana" : "Stellar";
+    view === "picker" ? "Deposit" : view === "evm" ? "Celo & Base" : view === "solana" ? "Solana" : "Stellar";
 
   return (
     <div
@@ -114,9 +114,9 @@ export function DepositModal({ wallet, initialChain, onClose }: Props) {
                 onClick={() => setView("evm")}
                 className="w-full text-left bg-cowry-card border border-cowry-border hover:border-cowry-green/40 rounded-2xl p-4 transition-all"
               >
-                <p className="text-sm font-bold text-white">Celo, Base &amp; Optimism</p>
+                <p className="text-sm font-bold text-white">Celo &amp; Base</p>
                 <p className="text-xs text-cowry-muted mt-0.5">
-                  {multiChainEvm ? "One address works on all three" : `Runs on ${wallet.chain}`}
+                  {multiChainEvm ? "One address works on both" : `Runs on ${wallet.chain}`}
                 </p>
               </button>
               <button

@@ -24,7 +24,7 @@ interface ListItem {
 const GRID_ITEMS: GridItem[] = [
   {
     label: "Deposit",
-    desc:  "Fund your account — Celo, Base, Optimism, Solana, or Stellar",
+    desc:  "Fund your account — Celo, Base, Solana, or Stellar",
     action: "deposit",
     iconBg: "bg-cowry-green shadow-[0_0_18px_4px_rgba(0,212,55,0.45)]",
     icon: (
