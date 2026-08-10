@@ -1,6 +1,11 @@
 "use client";
 import { formatFiat } from "@/lib/currency";
 
+const PROVIDER_LABEL: Record<string, string> = {
+  paycrest: "Paycrest",
+  quidax:   "Quidax",
+};
+
 type Props = {
   description?:    string;
   recipientLabel:  string;
@@ -11,6 +16,7 @@ type Props = {
   rateLabel:       string;
   feeLabel:        string;
   chain:           string;
+  provider:        string;
   onConfirm:       () => void;
   onCancel:        () => void;
 };
@@ -23,6 +29,7 @@ export function RemittanceQuoteCard({
   receiveAmount,
   receiveCurrency,
   chain,
+  provider,
   onConfirm,
   onCancel,
 }: Props) {
@@ -60,6 +67,7 @@ export function RemittanceQuoteCard({
       <div className="mb-6">
         <p className="text-xs text-cowry-muted mb-1">To</p>
         <p className="text-sm font-semibold text-white">{recipientLabel}</p>
+        <p className="text-[10px] text-cowry-muted mt-1">Paid out via {PROVIDER_LABEL[provider] ?? provider}</p>
       </div>
 
       {/* Actions */}

@@ -138,6 +138,7 @@ export function MessageBubble({ message, onConfirm, onCancel, onSign, onApprove,
             rateLabel={r.rateLabel}
             feeLabel={r.feeLabel}
             chain={r.chain}
+            provider={r.provider}
             onConfirm={onConfirm}
             onCancel={onCancel}
           />

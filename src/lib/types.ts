@@ -55,15 +55,16 @@ export type ChatResponse =
     }
   | {
       /**
-       * A cross-border remittance send was created (Paycrest) — branded
-       * "Payment sent" success confirmation with the CowryPay mark.
+       * A cross-border remittance send was created (auto-shopped between
+       * Paycrest and Quidax) — branded "Payment sent" success confirmation
+       * with the CowryPay mark.
        */
       type: "send_success";
       orderId: string;
       message: string;
     }
   | {
-      /** Cross-border remittance quote awaiting user confirm (Paycrest). */
+      /** Cross-border remittance quote awaiting user confirm — auto-shopped between Paycrest and Quidax. */
       type: "remittance_quote";
       preview: string;
       recipientLabel: string;
@@ -76,6 +77,8 @@ export type ChatResponse =
       feeLabel: string;
       /** Which chain this quote is locked to — worth surfacing once a wallet can hold balance on more than one. */
       chain: string;
+      /** Which provider this rate was actually locked with. */
+      provider: "paycrest" | "quidax";
     }
   | {
       /** On-ramp order created — shows virtual bank account for user to pay into. */

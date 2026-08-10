@@ -230,6 +230,8 @@ export function saveRecipient(input: {
  * the PIN, and submits it to createOfframpSend. Chat can only ever propose,
  * never execute (a message alone must never be sufficient to move money).
  */
+export type OfframpProvider = "paycrest" | "quidax";
+
 export type RemittanceDraft = {
   amount:          string;
   feeAmount:       string;
@@ -244,6 +246,8 @@ export type RemittanceDraft = {
   validUntil:      string;
   /** Which chain this quote (and the eventual payout) is locked to — a wallet can hold balance on more than one. */
   chain:           string;
+  /** Which provider actually locked this rate (auto-shopped between Paycrest and Quidax) — required when reusing this order via createOfframpSend. */
+  provider:        OfframpProvider;
 };
 
 /**
@@ -317,6 +321,8 @@ export function createOfframpSend(input: {
     reference:       string;
     feeAmount:       string;
     treasuryAddress: string;
+    /** Which provider actually created this locked order — must match, since Paycrest/Quidax use different bank-code namespaces. */
+    provider:        OfframpProvider;
   };
 }): Promise<{
   send: { id: string; state: string };
