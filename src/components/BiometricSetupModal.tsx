@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { setBiometricEnabled } from "@/lib/backendApi";
 import { registerBiometricCredential, clearBiometricCredential, biometricLabel } from "@/lib/biometric";
@@ -26,6 +26,10 @@ export function BiometricSetupModal({ mode, userId, email, onDone, onClose }: Pr
   const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  // True once the local WebAuthn credential is created — set once, never
+  // recreated on a reauth retry, otherwise a second registration prompt
+  // would fire for the same enable attempt.
+  const registeredRef = useRef(false);
 
   const code = digits.join("");
 
@@ -79,10 +83,6 @@ export function BiometricSetupModal({ mode, userId, email, onDone, onClose }: Pr
     }
   };
 
-  const handleSendCode = async () => {
-    if (await sendCode()) setStep("otp");
-  };
-
   const handleResend = async () => {
     if (resending) return;
     setResending(true);
@@ -90,26 +90,47 @@ export function BiometricSetupModal({ mode, userId, email, onDone, onClose }: Pr
     setResending(false);
   };
 
-  const performAction = async () => {
+  /** The actual protected action — assumes the session is fresh enough; callers handle reauth_required. */
+  const runAction = async () => {
+    if (mode === "enable") {
+      if (!registeredRef.current) {
+        await registerBiometricCredential(userId, email ?? "");
+        registeredRef.current = true;
+      }
+      await setBiometricEnabled(true);
+    } else {
+      clearBiometricCredential(userId);
+      await setBiometricEnabled(false);
+    }
+  };
+
+  /**
+   * Tries the action directly first — the user's session may already be
+   * fresh enough (e.g. they just verified OTP moments ago to set their
+   * PIN), in which case a second OTP send here would just collide with
+   * Supabase's own per-email resend cooldown for no reason. Only falls
+   * back to the OTP flow if the backend actually says it's needed.
+   */
+  const handleIntroContinue = async () => {
     setStep("action");
     setError("");
     try {
-      if (mode === "enable") {
-        await registerBiometricCredential(userId, email ?? "");
-        await setBiometricEnabled(true);
-      } else {
-        clearBiometricCredential(userId);
-        await setBiometricEnabled(false);
-      }
+      await runAction();
       onDone();
     } catch (err) {
+      if (err instanceof Error && err.message === "reauth_required") {
+        // Stay on the "action" spinner while the fallback code sends —
+        // bouncing back to "intro" first would flash the Continue button
+        // for no reason.
+        if (await sendCode()) setStep("otp");
+        else setStep("intro");
+        return;
+      }
       setError(getErrorMessage(
         err,
         mode === "enable" ? `Could not enable ${biometricLabel()}` : `Could not turn off ${biometricLabel()}`,
       ));
-      // The OTP was already verified — safe to let them retry the device
-      // prompt (or the disable call) without sending a new code.
-      setStep("otp");
+      setStep("intro");
     }
   };
 
@@ -121,12 +142,59 @@ export function BiometricSetupModal({ mode, userId, email, onDone, onClose }: Pr
       const { error: verifyError } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
       if (verifyError) throw verifyError;
       setLoading(false);
-      await performAction();
+      setStep("action");
+      try {
+        await runAction();
+        onDone();
+      } catch (err) {
+        setError(getErrorMessage(
+          err,
+          mode === "enable" ? `Could not enable ${biometricLabel()}` : `Could not turn off ${biometricLabel()}`,
+        ));
+        // OTP already verified — safe to retry the action without sending a new code.
+        setStep("otp");
+      }
     } catch (err) {
       setError(getErrorMessage(err, "Invalid or expired code"));
       setLoading(false);
     }
   };
+
+  // Auto-submits once all digits are in, whether typed or pasted — no need
+  // to hunt for the Continue button. Scoped to the "otp" step so a stale
+  // full code from an earlier attempt can't fire after moving on.
+  useEffect(() => {
+    if (step === "otp" && code.length === CODE_LENGTH && !loading) void handleVerifyCode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, step]);
+
+  // Best-effort: when the tab regains focus (e.g. the user switched to
+  // their email app, copied the code, and switched back), silently check
+  // the clipboard and fill it in without waiting for an explicit paste.
+  // Only works where the browser allows clipboard reads outside a direct
+  // user gesture — notably NOT Safari/iOS, which never permits this; the
+  // explicit paste-then-auto-submit above is the real fallback there.
+  useEffect(() => {
+    const tryClipboard = async () => {
+      if (step !== "otp" || document.visibilityState !== "visible" || loading || !navigator.clipboard?.readText) return;
+      try {
+        const text = await navigator.clipboard.readText();
+        const found = text.replace(/\D/g, "").slice(0, CODE_LENGTH);
+        if (found.length === CODE_LENGTH) {
+          setDigits(Array.from({ length: CODE_LENGTH }, (_, i) => found[i] ?? ""));
+        }
+      } catch {
+        // Not permitted here (no user gesture) — silently do nothing, the manual paste path still works.
+      }
+    };
+    document.addEventListener("visibilitychange", tryClipboard);
+    window.addEventListener("focus", tryClipboard);
+    return () => {
+      document.removeEventListener("visibilitychange", tryClipboard);
+      window.removeEventListener("focus", tryClipboard);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, loading]);
 
   return (
     <div
@@ -156,11 +224,11 @@ export function BiometricSetupModal({ mode, userId, email, onDone, onClose }: Pr
                 {mode === "enable"
                   ? "Unlock CowryPay with your face or fingerprint instead of typing in each time. "
                   : ""}
-                Changing this requires a fresh login, so we&apos;ll send a verification code to your email first.
+                Changing this requires a fresh login — we&apos;ll ask for a verification code if you need one.
               </p>
               {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
-              <AuthButton onClick={handleSendCode} disabled={loading}>
-                {loading ? "Sending code…" : "Send Code"}
+              <AuthButton onClick={handleIntroContinue}>
+                Continue
               </AuthButton>
             </div>
           )}

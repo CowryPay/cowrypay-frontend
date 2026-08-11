@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { setTransactionPin } from "@/lib/backendApi";
 import { getErrorMessage } from "@/lib/errors";
@@ -117,6 +117,42 @@ export function SetPinModal({ email, onDone, onClose }: Props) {
       setLoading(false);
     }
   };
+
+  // Auto-submits once all digits are in, whether typed or pasted — no need
+  // to hunt for the Continue button. Scoped to the "otp" step so a stale
+  // full code from an earlier attempt can't fire after moving on.
+  useEffect(() => {
+    if (step === "otp" && code.length === CODE_LENGTH && !loading) void handleVerifyCode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, step]);
+
+  // Best-effort: when the tab regains focus (e.g. the user switched to
+  // their email app, copied the code, and switched back), silently check
+  // the clipboard and fill it in without waiting for an explicit paste.
+  // Only works where the browser allows clipboard reads outside a direct
+  // user gesture — notably NOT Safari/iOS, which never permits this; the
+  // explicit paste-then-auto-submit above is the real fallback there.
+  useEffect(() => {
+    const tryClipboard = async () => {
+      if (step !== "otp" || document.visibilityState !== "visible" || loading || !navigator.clipboard?.readText) return;
+      try {
+        const text = await navigator.clipboard.readText();
+        const found = text.replace(/\D/g, "").slice(0, CODE_LENGTH);
+        if (found.length === CODE_LENGTH) {
+          setDigits(Array.from({ length: CODE_LENGTH }, (_, i) => found[i] ?? ""));
+        }
+      } catch {
+        // Not permitted here (no user gesture) — silently do nothing, the manual paste path still works.
+      }
+    };
+    document.addEventListener("visibilitychange", tryClipboard);
+    window.addEventListener("focus", tryClipboard);
+    return () => {
+      document.removeEventListener("visibilitychange", tryClipboard);
+      window.removeEventListener("focus", tryClipboard);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, loading]);
 
   const submitPin = async (pin: string) => {
     setError("");
