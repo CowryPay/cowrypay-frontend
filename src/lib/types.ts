@@ -55,16 +55,16 @@ export type ChatResponse =
     }
   | {
       /**
-       * A cross-border remittance send was created (auto-shopped between
-       * Paycrest and Quidax) — branded "Payment sent" success confirmation
-       * with the CowryPay mark.
+       * A cross-border remittance send was created (auto-shopped across
+       * every eligible off-ramp provider) — branded "Payment sent" success
+       * confirmation with the CowryPay mark.
        */
       type: "send_success";
       orderId: string;
       message: string;
     }
   | {
-      /** Cross-border remittance quote awaiting user confirm — auto-shopped between Paycrest and Quidax. */
+      /** Cross-border remittance quote awaiting user confirm — auto-shopped across every eligible off-ramp provider. */
       type: "remittance_quote";
       preview: string;
       recipientLabel: string;
