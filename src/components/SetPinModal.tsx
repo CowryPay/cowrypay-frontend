@@ -6,7 +6,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { PinDots, Keypad, PIN_LENGTH } from "@/components/PinPad";
 
-const CODE_LENGTH = 8;
+const CODE_LENGTH = 6;
 
 type Step = "intro" | "otp" | "pin";
 type PinStep = "enter" | "confirm";

@@ -6,7 +6,7 @@ import { registerBiometricCredential, clearBiometricCredential, biometricLabel }
 import { getErrorMessage } from "@/lib/errors";
 import { AuthButton } from "@/components/auth/AuthButton";
 
-const CODE_LENGTH = 8;
+const CODE_LENGTH = 6;
 
 type Step = "intro" | "otp" | "action";
 
