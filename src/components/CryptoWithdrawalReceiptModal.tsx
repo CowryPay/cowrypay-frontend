@@ -17,8 +17,21 @@ const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 40;
 const STOP_POLLING_STATES = new Set(["CONFIRMED", "FAILED"]);
 
-const ZIGZAG_PATTERN =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cpath d='M0 24L12 0L24 24L36 0L48 24' stroke='%2300D437' stroke-width='2' fill='none'/%3E%3C/svg%3E\")";
+// Pure CSS zigzag (gradient triangles) — no image asset involved. An SVG
+// data-URI background-image here previously tainted the html2canvas
+// export on iOS Safari ("The operation is insecure"), even with the logo
+// <img> fixed via crossOrigin — CSS background-images have no crossOrigin
+// equivalent, so this was the only real fix.
+const ZIGZAG_STYLE = {
+  backgroundImage:
+    "linear-gradient(135deg, #00D437 25%, transparent 25%), " +
+    "linear-gradient(225deg, #00D437 25%, transparent 25%), " +
+    "linear-gradient(315deg, #00D437 25%, transparent 25%), " +
+    "linear-gradient(45deg, #00D437 25%, transparent 25%)",
+  backgroundPosition: "8px 0, 8px 0, 0 0, 0 0",
+  backgroundSize: "16px 16px",
+  backgroundRepeat: "repeat-x",
+} as const;
 
 function shortenAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -236,11 +249,11 @@ export function CryptoWithdrawalReceiptModal({ withdrawalId, wallet, onClose }: 
                 >
                   <div
                     className="absolute inset-x-0 top-0 h-14 opacity-[0.08]"
-                    style={{ backgroundImage: ZIGZAG_PATTERN, backgroundRepeat: "repeat-x" }}
+                    style={ZIGZAG_STYLE}
                   />
                   <div
                     className="absolute inset-x-0 bottom-0 h-14 opacity-[0.08]"
-                    style={{ backgroundImage: ZIGZAG_PATTERN, backgroundRepeat: "repeat-x" }}
+                    style={ZIGZAG_STYLE}
                   />
 
                   <div className="relative px-6 py-7">
