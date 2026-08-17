@@ -166,6 +166,7 @@ export function ChatInterface() {
         </Link>
 
         <button
+          onClick={() => { setDepositInitialChain(null); setShowDeposit(true); }}
           className="flex items-center gap-1.5 text-xs lg:text-sm font-medium text-white border border-cowry-green/60 rounded-full px-4 py-1.5 hover:border-cowry-green transition-colors"
           title={address ?? undefined}
         >
