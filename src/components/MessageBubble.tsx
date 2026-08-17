@@ -4,6 +4,7 @@ import { linkify } from "@/lib/linkify";
 import { TransactionCard } from "./TransactionCard";
 import { TxHistoryCard } from "./TxHistoryCard";
 import { RemittanceQuoteCard } from "./RemittanceQuoteCard";
+import { CryptoWithdrawalQuoteCard } from "./CryptoWithdrawalQuoteCard";
 import { OnRampCard } from "./OnRampCard";
 import { DepositAddressCard } from "./DepositAddressCard";
 import { SendSuccessCard } from "./SendSuccessCard";
@@ -21,12 +22,15 @@ interface Props {
   txLoading:  boolean;
   /** Reference of the one remittance quote still actionable — every other one in chat history is stale. */
   activeQuoteReference: string | null;
+  /** Same idea as activeQuoteReference, for the crypto-withdrawal-to-wallet quote card. */
+  activeWithdrawalReference: string | null;
   /** True while a send is being confirmed (PIN open or in flight) — freezes the active quote card so it can't be double-tapped. */
   sendPending: boolean;
 }
 
 export function MessageBubble({
-  message, onConfirm, onCancel, onSign, onApprove, onViewAllTxHistory, txLoading, activeQuoteReference, sendPending,
+  message, onConfirm, onCancel, onSign, onApprove, onViewAllTxHistory, txLoading,
+  activeQuoteReference, activeWithdrawalReference, sendPending,
 }: Props) {
   const isUser = message.role === "user";
   const r = message.response;
@@ -36,8 +40,8 @@ export function MessageBubble({
 
       <div className={`max-w-[82%] flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
 
-        {/* Bubble — remittance quotes fold this text into the card below instead */}
-        {r?.type !== "remittance_quote" && r?.type !== "send_success" && (
+        {/* Bubble — remittance/withdrawal quotes fold this text into the card below instead */}
+        {r?.type !== "remittance_quote" && r?.type !== "crypto_withdrawal_quote" && r?.type !== "send_success" && (
           <div
             className={`px-4 py-3 rounded-[22px] text-sm whitespace-pre-wrap leading-relaxed ${
               isUser
@@ -145,6 +149,20 @@ export function MessageBubble({
             feeLabel={r.feeLabel}
             chain={r.chain}
             disabled={r.reference !== activeQuoteReference || sendPending}
+            onConfirm={onConfirm}
+            onCancel={onCancel}
+          />
+        )}
+
+        {/* Crypto withdrawal quote awaiting confirm */}
+        {r?.type === "crypto_withdrawal_quote" && (
+          <CryptoWithdrawalQuoteCard
+            description={message.text}
+            amount={r.amount}
+            tokenSymbol={r.tokenSymbol}
+            chain={r.chain}
+            toAddress={r.toAddress}
+            disabled={r.reference !== activeWithdrawalReference || sendPending}
             onConfirm={onConfirm}
             onCancel={onCancel}
           />

@@ -248,6 +248,23 @@ export type RemittanceDraft = {
   chain:           string;
   /** Which provider actually locked this rate (auto-shopped across every eligible off-ramp provider) — required when reusing this order via createOfframpSend. */
   provider:        OfframpProvider;
+  /** Which token this order was actually quoted/created for — omitted defaults to USDC server-side, so this must be forwarded via createOfframpSend's existingOrder, not just displayed. */
+  tokenSymbol:     string;
+};
+
+/**
+ * A withdraw-to-external-wallet request chat has fully resolved (amount,
+ * destination address, chain, token all known and balance-checked) but not
+ * money-moved yet — the frontend must show the full destination address
+ * back to the user (never truncated/buried) for explicit review, collect
+ * the PIN, and submit via initiateCryptoWithdrawal itself. Chat only ever
+ * proposes this draft, same §9 boundary as RemittanceDraft above.
+ */
+export type CryptoWithdrawalDraft = {
+  amount:      string;
+  toAddress:   string;
+  chain:       string;
+  tokenSymbol: string;
 };
 
 /**
@@ -255,12 +272,13 @@ export type RemittanceDraft = {
  * that parses free-form "send $X to Y" requests into a multi-turn remittance
  * draft (server-persisted between messages), and a Groq/Claude fallback for
  * general conversation. `pendingSend` is present once a send request fully
- * resolves — see RemittanceDraft.
+ * resolves — see RemittanceDraft. `pendingCryptoWithdrawal` is the same idea
+ * for a "withdraw to wallet" request — see CryptoWithdrawalDraft.
  */
 export function sendChatMessage(
   message: string,
   signal?: AbortSignal,
-): Promise<{ reply: string; pendingSend?: RemittanceDraft }> {
+): Promise<{ reply: string; pendingSend?: RemittanceDraft; pendingCryptoWithdrawal?: CryptoWithdrawalDraft }> {
   return authedFetch("/chat", { method: "POST", body: JSON.stringify({ message }), signal });
 }
 
@@ -323,6 +341,8 @@ export function createOfframpSend(input: {
     treasuryAddress: string;
     /** Which provider actually created this locked order — must match, since each provider uses its own bank-code namespace. */
     provider:        OfframpProvider;
+    /** Which token this order was actually locked in — omitting this makes the backend default to USDC regardless of what was quoted (see LockedOrder.tokenSymbol on the backend). */
+    tokenSymbol:     string;
   };
 }): Promise<{
   send: { id: string; state: string };
@@ -361,16 +381,20 @@ export type CryptoWithdrawalTransition = {
 };
 
 /**
- * Direct on-chain withdrawal to a user-supplied address — no fiat, no fee,
- * REST-only by design (never reachable via chat, since a wrong address here
- * is unrecoverable money loss). The PIN is verified server-side inside this
- * call, same as createOfframpSend.
+ * Direct on-chain withdrawal to a user-supplied address — no fiat, a 0.3%
+ * platform fee. Chat can build a draft (see CryptoWithdrawalDraft) but never
+ * calls this itself — a wrong destination address here is unrecoverable
+ * money loss, so this always requires the app to show the user the full
+ * address and collect a fresh PIN first. The PIN is verified server-side
+ * inside this call, same as createOfframpSend.
  */
 export function initiateCryptoWithdrawal(input: {
-  chain:     string;
-  amount:    string;
-  toAddress: string;
-  pin:       string;
+  chain:       string;
+  amount:      string;
+  toAddress:   string;
+  pin:         string;
+  /** Omit for USDC — only Celo and Solana support anything else right now. */
+  tokenSymbol?: string;
 }): Promise<{ withdrawal: CryptoWithdrawal }> {
   return authedFetch("/crypto-withdrawals", { method: "POST", body: JSON.stringify(input) });
 }

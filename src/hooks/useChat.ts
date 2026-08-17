@@ -4,9 +4,11 @@ import { resetSession } from "@/lib/agent";
 import {
   sendChatMessage,
   createOfframpSend,
+  initiateCryptoWithdrawal,
   saveRecipient,
   type PublicUser,
   type RemittanceDraft,
+  type CryptoWithdrawalDraft,
 } from "@/lib/backendApi";
 import { formatFiat, formatToken } from "@/lib/currency";
 import { sendTransaction, waitForTransaction } from "@/lib/wallet";
@@ -37,11 +39,22 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
   const [activeSendReference, setActiveSendReference] = useState<string | null>(null);
   /** Set right after a send is submitted — opens the receipt modal, which polls until it settles. */
   const [receiptSendId, setReceiptSendId] = useState<string | null>(null);
+  /** Same idea as activeSendReference, for the crypto-withdrawal-to-wallet quote card. */
+  const [activeWithdrawalReference, setActiveWithdrawalReference] = useState<string | null>(null);
+  /** Set right after a chat-confirmed withdrawal is submitted — opens the withdrawal receipt modal. */
+  const [receiptWithdrawalId, setReceiptWithdrawalId] = useState<string | null>(null);
   const sessionIdRef = useRef(newSessionId());
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSendRef = useRef<RemittanceDraft | null>(null);
+  /**
+   * Mirrors pendingSendRef for the crypto-withdrawal-to-wallet flow — the
+   * backend session only ever holds one draft type at a time (see
+   * sessionRepository.ts's ChatDraftIntent), so a new quote of either kind
+   * always clears the other here too.
+   */
+  const pendingCryptoWithdrawalRef = useRef<CryptoWithdrawalDraft | null>(null);
   /** Set right after a send completes — the next message is read as a nickname (or "skip"), not a normal chat message. */
   const pendingSaveRecipientRef = useRef<{
     institution: string;
@@ -97,13 +110,33 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
    * forwards the message and turns a resolved draft into a confirm card.
    */
   const fetchAgentResponse = useCallback(async (text: string, signal?: AbortSignal): Promise<ChatResponse> => {
-    const { reply, pendingSend } = await sendChatMessage(text, signal);
+    const { reply, pendingSend, pendingCryptoWithdrawal } = await sendChatMessage(text, signal);
+    if (pendingCryptoWithdrawal) {
+      pendingSendRef.current = null;
+      setActiveSendReference(null);
+      pendingCryptoWithdrawalRef.current = pendingCryptoWithdrawal;
+      const reference = crypto.randomUUID();
+      setActiveWithdrawalReference(reference);
+      return {
+        type: "crypto_withdrawal_quote",
+        preview: reply,
+        amount: formatToken(pendingCryptoWithdrawal.amount),
+        tokenSymbol: pendingCryptoWithdrawal.tokenSymbol,
+        chain: pendingCryptoWithdrawal.chain,
+        toAddress: pendingCryptoWithdrawal.toAddress,
+        reference,
+      };
+    }
     if (pendingSend) {
+      pendingCryptoWithdrawalRef.current = null;
+      setActiveWithdrawalReference(null);
       pendingSendRef.current = pendingSend;
       setActiveSendReference(pendingSend.reference);
       const receiveAmount = (parseFloat(pendingSend.netAmount) * parseFloat(pendingSend.rate)).toFixed(2);
       const sendAmount = formatToken(pendingSend.amount);
       const feeAmount = formatToken(pendingSend.feeAmount);
+      // Omitted on older backend responses means USDC — see RemittanceDraft.tokenSymbol's own comment.
+      const sendToken = (pendingSend.tokenSymbol as "USDC" | "USDT" | undefined) ?? "USDC";
       const last4 = pendingSend.recipient.accountIdentifier.slice(-4);
       const institutionPart = pendingSend.recipient.institutionName
         ? `${pendingSend.recipient.institutionName} ••••${last4}`
@@ -114,8 +147,8 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
         "🌍 Cross-Border Payment",
         `To: ${recipientLabel}`,
         `They get: ${formatFiat(receiveAmount, pendingSend.fiatCurrency)} ${pendingSend.fiatCurrency}`,
-        `You send: ${sendAmount} USDC (${pendingSend.chain})`,
-        `Fee: ${feeAmount} USDC`,
+        `You send: ${sendAmount} ${sendToken} (${pendingSend.chain})`,
+        `Fee: ${feeAmount} ${sendToken}`,
         `Rate: 1 USD ≈ ${formatFiat(pendingSend.rate, pendingSend.fiatCurrency)} (locked for ~1hr)`,
         "",
         "Reply confirm to send, or cancel to abort.",
@@ -126,11 +159,11 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
         preview,
         recipientLabel,
         sendAmount,
-        sendToken: "USDC",
+        sendToken,
         receiveAmount,
         receiveCurrency: pendingSend.fiatCurrency,
-        rateLabel: `1 USDC ≈ ${pendingSend.rate} ${pendingSend.fiatCurrency}`,
-        feeLabel: `${feeAmount} USDC`,
+        rateLabel: `1 ${sendToken} ≈ ${pendingSend.rate} ${pendingSend.fiatCurrency}`,
+        feeLabel: `${feeAmount} ${sendToken}`,
         chain: pendingSend.chain,
         reference: pendingSend.reference,
       };
@@ -232,9 +265,9 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     void resetSessionState();
   }, [resetSessionState]);
 
-  /** Called when user taps Confirm on the send quote card — opens PIN verification. */
+  /** Called when user taps Confirm on the send (or withdrawal) quote card — opens PIN verification. */
   const confirm = useCallback(() => {
-    if (!pendingSendRef.current) return;
+    if (!pendingSendRef.current && !pendingCryptoWithdrawalRef.current) return;
     if (!user?.pinSet) {
       addMessage({
         role: "bot",
@@ -245,15 +278,18 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     setPinVerifyOpen(true);
   }, [user, addMessage]);
 
-  /** Called when user taps Cancel on the send quote card. */
+  /** Called when user taps Cancel on the send (or withdrawal) quote card. */
   const cancel = useCallback(() => {
     pendingSendRef.current = null;
     setActiveSendReference(null);
+    pendingCryptoWithdrawalRef.current = null;
+    setActiveWithdrawalReference(null);
     addMessage({ role: "bot", text: "Okay, cancelled." });
   }, [addMessage]);
 
   const closePinVerify = useCallback(() => setPinVerifyOpen(false), []);
   const closeReceipt = useCallback(() => setReceiptSendId(null), []);
+  const closeWithdrawalReceipt = useCallback(() => setReceiptWithdrawalId(null), []);
 
   /**
    * VerifyPinModal already confirmed this PIN is correct before calling this
@@ -265,6 +301,36 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
   const onPinVerified = useCallback(
     async (pin: string) => {
       setPinVerifyOpen(false);
+
+      const withdrawalDraft = pendingCryptoWithdrawalRef.current;
+      if (withdrawalDraft) {
+        setLoading(true);
+        try {
+          const { withdrawal } = await initiateCryptoWithdrawal({
+            chain: withdrawalDraft.chain,
+            amount: withdrawalDraft.amount,
+            toAddress: withdrawalDraft.toAddress,
+            pin,
+            tokenSymbol: withdrawalDraft.tokenSymbol,
+          });
+          pendingCryptoWithdrawalRef.current = null;
+          setActiveWithdrawalReference(null);
+          setReceiptWithdrawalId(withdrawal.id);
+          addMessage({
+            role: "bot",
+            text: `✅ Withdrawal submitted — ${formatToken(withdrawalDraft.amount)} ${withdrawalDraft.tokenSymbol} to ${withdrawalDraft.toAddress} on ${withdrawalDraft.chain}.`,
+          });
+        } catch (e) {
+          // The draft stays live (not cleared) so Confirm can be tapped again to retry.
+          addMessage({
+            role: "bot",
+            text: `⚠️ Couldn't complete the withdrawal: ${e instanceof Error ? e.message : "unknown error"}`,
+          });
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
 
       const draft = pendingSendRef.current;
       if (!draft) return;
@@ -287,6 +353,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
             feeAmount:       draft.feeAmount,
             treasuryAddress: draft.treasuryAddress,
             provider:        draft.provider,
+            tokenSymbol:     draft.tokenSymbol,
           },
         });
         pendingSendRef.current = null;
@@ -461,6 +528,9 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     activeSendReference,
     receiptSendId,
     closeReceipt,
+    activeWithdrawalReference,
+    receiptWithdrawalId,
+    closeWithdrawalReceipt,
   };
 }
 
@@ -474,6 +544,7 @@ function responseToText(r: ChatResponse): string {
     case "tx_sent":    return "✅ Payment sent by Cowry AI agent!";
     case "tx_history": return `Here are your last ${r.items.length} transaction${r.items.length === 1 ? "" : "s"}:`;
     case "remittance_quote": return r.preview;
+    case "crypto_withdrawal_quote": return r.preview;
     case "send_success":    return r.message;
     default:           return "...";
   }

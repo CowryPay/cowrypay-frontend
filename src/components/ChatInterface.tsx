@@ -15,6 +15,7 @@ import { TransactionHistoryModal } from "./TransactionHistoryModal";
 import { SettingsPanel }      from "./SettingsPanel";
 import { VerifyPinModal }     from "./VerifyPinModal";
 import { ReceiptModal }       from "./ReceiptModal";
+import { CryptoWithdrawalReceiptModal } from "./CryptoWithdrawalReceiptModal";
 import { NotificationBell }   from "./NotificationBell";
 import { AppLockScreen }      from "./AppLockScreen";
 import { DepositModal }       from "./DepositModal";
@@ -60,6 +61,7 @@ export function ChatInterface() {
     messages, loading, txLoading, send, stop, confirm, cancel, signAndSend, addBotMessage, bottomRef,
     pinVerifyOpen, closePinVerify, onPinVerified, activeSendReference,
     receiptSendId, closeReceipt,
+    activeWithdrawalReference, receiptWithdrawalId, closeWithdrawalReceipt,
   } = useChat(user, (chain) => { setDepositInitialChain(chain); setShowDeposit(true); });
 
   const [locked, setLocked] = useState(false);
@@ -264,6 +266,7 @@ export function ChatInterface() {
             onViewAllTxHistory={() => setShowTxHistory(true)}
             txLoading={txLoading}
             activeQuoteReference={activeSendReference}
+            activeWithdrawalReference={activeWithdrawalReference}
             sendPending={loading || pinVerifyOpen}
           />
         ))}
@@ -412,6 +415,10 @@ export function ChatInterface() {
 
       {receiptSendId && wallet && (
         <ReceiptModal sendId={receiptSendId} wallet={wallet} onClose={closeReceipt} />
+      )}
+
+      {receiptWithdrawalId && wallet && (
+        <CryptoWithdrawalReceiptModal withdrawalId={receiptWithdrawalId} wallet={wallet} onClose={closeWithdrawalReceipt} />
       )}
 
       {showDeposit && wallet && (

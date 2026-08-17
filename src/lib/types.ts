@@ -81,6 +81,22 @@ export type ChatResponse =
       reference: string;
     }
   | {
+      /**
+       * A "withdraw to wallet" request chat has fully resolved, awaiting
+       * user confirm — mirrors remittance_quote's shape/purpose but for a
+       * direct crypto-to-crypto withdrawal. toAddress is shown in full,
+       * never truncated, so the user can actually verify it.
+       */
+      type: "crypto_withdrawal_quote";
+      preview: string;
+      amount: string;
+      tokenSymbol: string;
+      chain: string;
+      toAddress: string;
+      /** Identifies which specific draft this card represents — lets the UI tell a stale card (from earlier in the chat) apart from the one currently actionable. */
+      reference: string;
+    }
+  | {
       /** On-ramp order created — shows virtual bank account for user to pay into. */
       type: "onramp_virtual_account";
       preview: string;
