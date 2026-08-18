@@ -3,6 +3,9 @@
 type Props = {
   description?: string;
   amount:       string;
+  /** Estimated — see fetchAgentResponse's own comment on why this can't be exact until submit. */
+  feeAmount:    string;
+  netAmount:    string;
   tokenSymbol:  string;
   chain:        string;
   toAddress:    string;
@@ -15,6 +18,8 @@ type Props = {
 export function CryptoWithdrawalQuoteCard({
   description,
   amount,
+  feeAmount,
+  netAmount,
   tokenSymbol,
   chain,
   toAddress,
@@ -48,6 +53,18 @@ export function CryptoWithdrawalQuoteCard({
         <div className="text-right">
           <p className="text-xs text-cowry-muted mb-1">Network</p>
           <p className="text-lg font-bold text-white capitalize">{chain}</p>
+        </div>
+      </div>
+
+      {/* Fee / net — estimated client-side (0.3%, 0.1 min); the exact fee locks in on submit */}
+      <div className="flex justify-between gap-4 mb-5">
+        <div>
+          <p className="text-xs text-cowry-muted mb-1">Est. fee</p>
+          <p className="text-sm font-semibold text-white">{feeAmount} {tokenSymbol}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-cowry-muted mb-1">They&apos;ll receive</p>
+          <p className="text-sm font-semibold text-white">{netAmount} {tokenSymbol}</p>
         </div>
       </div>
 

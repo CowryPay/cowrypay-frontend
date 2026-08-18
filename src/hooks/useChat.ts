@@ -11,6 +11,7 @@ import {
   type CryptoWithdrawalDraft,
 } from "@/lib/backendApi";
 import { formatFiat, formatToken } from "@/lib/currency";
+import { computeCryptoWithdrawalFeeSplit } from "@/lib/cryptoWithdrawalFee";
 import { sendTransaction, waitForTransaction } from "@/lib/wallet";
 import type { Message, ChatResponse, EncodedTxJson } from "@/lib/types";
 
@@ -117,10 +118,19 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
       pendingCryptoWithdrawalRef.current = pendingCryptoWithdrawal;
       const reference = crypto.randomUUID();
       setActiveWithdrawalReference(reference);
+      // No live quote endpoint for withdrawals (unlike off-ramp sends, which
+      // lock a real provider order) — mirrors the backend's own fee formula
+      // client-side so the card isn't stuck saying "No fee" like before.
+      // The backend's `reply` text already states its own exact computed
+      // fee in prose; this should match unless the deployed fee env vars
+      // were changed from their defaults (see cryptoWithdrawalFee.ts).
+      const split = computeCryptoWithdrawalFeeSplit(pendingCryptoWithdrawal.amount);
       return {
         type: "crypto_withdrawal_quote",
         preview: reply,
         amount: formatToken(pendingCryptoWithdrawal.amount),
+        feeAmount: split ? formatToken(split.feeAmount) : "0.00",
+        netAmount: split ? formatToken(split.netAmount) : formatToken(pendingCryptoWithdrawal.amount),
         tokenSymbol: pendingCryptoWithdrawal.tokenSymbol,
         chain: pendingCryptoWithdrawal.chain,
         toAddress: pendingCryptoWithdrawal.toAddress,

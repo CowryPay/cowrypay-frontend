@@ -90,6 +90,9 @@ export type ChatResponse =
       type: "crypto_withdrawal_quote";
       preview: string;
       amount: string;
+      /** Estimated client-side (no live quote endpoint for withdrawals) — see cryptoWithdrawalFee.ts. */
+      feeAmount: string;
+      netAmount: string;
       tokenSymbol: string;
       chain: string;
       toAddress: string;

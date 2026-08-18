@@ -159,6 +159,8 @@ export function MessageBubble({
           <CryptoWithdrawalQuoteCard
             description={message.text}
             amount={r.amount}
+            feeAmount={r.feeAmount}
+            netAmount={r.netAmount}
             tokenSymbol={r.tokenSymbol}
             chain={r.chain}
             toAddress={r.toAddress}

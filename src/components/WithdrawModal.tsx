@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { initiateCryptoWithdrawal, type Wallet } from "@/lib/backendApi";
 import { isValidAddressForChain } from "@/lib/addressValidation";
+import { computeCryptoWithdrawalFeeSplit } from "@/lib/cryptoWithdrawalFee";
+import { formatToken } from "@/lib/currency";
 import { getErrorMessage } from "@/lib/errors";
 import { VerifyPinModal } from "./VerifyPinModal";
 import { CryptoWithdrawalReceiptModal } from "./CryptoWithdrawalReceiptModal";
@@ -47,7 +49,8 @@ export function WithdrawModal({ wallet, onClose }: Props) {
 
   const address = toAddress.trim();
   const addressValid = chain ? address.length > 0 && isValidAddressForChain(chain, address) : false;
-  const amountValid = Number(amount) > 0;
+  const feeSplit = amount ? computeCryptoWithdrawalFeeSplit(amount) : null;
+  const amountValid = Number(amount) > 0 && !!feeSplit;
   const sendingToSelf =
     addressValid && (view === "celo" || view === "base" || view === "optimism") &&
     address.toLowerCase() === wallet.address.toLowerCase();
@@ -173,6 +176,11 @@ export function WithdrawModal({ wallet, onClose }: Props) {
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full bg-transparent border-none outline-none text-4xl font-bold text-white placeholder-cowry-muted/30"
                 />
+                {amount && !feeSplit && (
+                  <p className="text-[10px] text-red-400 mt-1">
+                    Too small to withdraw — it wouldn&apos;t cover the minimum 0.1 USDC fee.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -220,7 +228,7 @@ export function WithdrawModal({ wallet, onClose }: Props) {
                   Confirm Withdrawal
                 </span>
                 <span className="text-[11px] font-medium text-cowry-green bg-cowry-green/10 border border-cowry-green/40 rounded-full px-3 py-1">
-                  No fee
+                  0.3% fee
                 </span>
               </div>
 
@@ -234,6 +242,19 @@ export function WithdrawModal({ wallet, onClose }: Props) {
                   <p className="text-lg font-bold text-white">{chainLabel}</p>
                 </div>
               </div>
+
+              {feeSplit && (
+                <div className="flex justify-between gap-4 mb-5">
+                  <div>
+                    <p className="text-xs text-cowry-muted mb-1">Fee</p>
+                    <p className="text-sm font-semibold text-white">{formatToken(feeSplit.feeAmount)} USDC</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-cowry-muted mb-1">Recipient gets</p>
+                    <p className="text-sm font-semibold text-white">{formatToken(feeSplit.netAmount)} USDC</p>
+                  </div>
+                </div>
+              )}
 
               <div className="mb-6">
                 <p className="text-xs text-cowry-muted mb-1">To</p>
