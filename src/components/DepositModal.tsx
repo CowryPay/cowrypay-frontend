@@ -137,7 +137,12 @@ export function DepositModal({ wallet, initialChain, onClose }: Props) {
           )}
 
           {view === "evm" && (
-            <DepositAddressCard address={wallet.address} chain={wallet.chain} multiChain={multiChainEvm} />
+            <DepositAddressCard
+              address={wallet.address}
+              chain={wallet.chain}
+              multiChain={multiChainEvm}
+              note={multiChainEvm ? "Send USDC on any of the chains above, or USDT on Celo, to this same address." : undefined}
+            />
           )}
 
           {(view === "solana" || view === "stellar") && loading && (
@@ -150,7 +155,7 @@ export function DepositModal({ wallet, initialChain, onClose }: Props) {
           )}
 
           {view === "solana" && !loading && solanaAddress && (
-            <DepositAddressCard address={solanaAddress} chain="Solana" />
+            <DepositAddressCard address={solanaAddress} chain="Solana" note="This address also accepts USDT." />
           )}
 
           {view === "stellar" && !loading && stellarWallet && (

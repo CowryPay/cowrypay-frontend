@@ -54,8 +54,8 @@ const FEATURES = [
   },
   {
     img: "/celo.png",
-    title: "Built on Celo",
-    desc: "Sub-cent fees and instant finality, built for everyday payments and remittances.",
+    title: "Multi-Chain Wallets",
+    desc: "A custodial wallet on Celo, Base, Solana, and Stellar — sub-cent fees and instant finality, built for everyday payments and remittances.",
     tint: "rgba(245,158,11,0.08)",
   },
 ];
@@ -93,9 +93,10 @@ export default function LandingPage() {
         </h1>
 
         <p className="max-w-md mx-auto text-cowry-muted text-sm sm:text-base leading-relaxed mb-10">
-          CowryPay is an AI-powered crypto payment app built on Celo. Send
-          money to a bank account abroad, Send Celo USDC to another chain, or
-          check your balance — just type what you want.
+          CowryPay is an AI-powered crypto payment app with wallets on Celo,
+          Base, Solana, and Stellar. Send money to a bank account abroad,
+          send USDC or USDT to another chain, or check your balance — just
+          type what you want.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
@@ -208,7 +209,7 @@ export default function LandingPage() {
 
             </div>
           </div>
-          <p className="text-center text-cowry-muted text-xs mt-4">Live on Celo Mainnet</p>
+          <p className="text-center text-cowry-muted text-xs mt-4">Live on Celo, Base, Solana &amp; Stellar</p>
         </div>
       </section>
 

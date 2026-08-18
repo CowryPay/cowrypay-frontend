@@ -14,6 +14,8 @@ type Props = {
   chain:       string;
   /** True for a self-custody (aws-kms) wallet — this address isn't limited to `chain`. */
   multiChain?: boolean;
+  /** Explanatory text under the address — which token(s)/chain(s) this address actually accepts. */
+  note?:       string;
 };
 
 function CopyIcon() {
@@ -33,7 +35,7 @@ function CheckIcon() {
   );
 }
 
-export function DepositAddressCard({ address, chain, multiChain }: Props) {
+export function DepositAddressCard({ address, chain, multiChain, note }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -83,9 +85,9 @@ export function DepositAddressCard({ address, chain, multiChain }: Props) {
           {copied ? <CheckIcon /> : <CopyIcon />}
         </button>
       </div>
-      {multiChain && (
+      {note && (
         <p className="text-[11px] text-cowry-muted mt-1.5">
-          Send USDC on any of the chains above to this same address.
+          {note}
         </p>
       )}
     </div>
