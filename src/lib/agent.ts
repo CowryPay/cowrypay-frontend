@@ -1,4 +1,4 @@
-import type { ChatResponse, BridgeChainsConfig, BridgeQuoteResult, BridgeStatus } from "./types";
+import type { ChatResponse } from "./types";
 
 function base(): string {
   // In production/staging: set NEXT_PUBLIC_AGENT_URL to the hosted agent URL.
@@ -40,49 +40,6 @@ export function chat(
 /** Clear server-side pending state for a chat session (drafts, remittance flow, etc.). */
 export function resetSession(sessionId: string): Promise<{ ok: boolean }> {
   return post("/session/reset", { sessionId });
-}
-
-// ── Cross-chain send (LI.FI; Celo → other chain USDC) ───────────────────────
-
-export async function getBridgeChains(): Promise<BridgeChainsConfig> {
-  return get<BridgeChainsConfig>("/bridge/chains");
-}
-
-/** @deprecated Use getBridgeChains — kept for cached bundles */
-export const getChains = getBridgeChains;
-
-export function getBridgeQuote(params: {
-  fromChainId:      number;
-  fromTokenAddress: string;
-  fromAmount:       string;
-  fromAddress:      string;
-  toChainId:        number;
-  toTokenAddress:   string;
-  toAddress:        string;
-}): Promise<BridgeQuoteResult> {
-  return post("/bridge/quote", params);
-}
-
-export function getBridgeStatus(
-  txHash:      string,
-  fromChainId: number,
-  toChainId:   number,
-): Promise<BridgeStatus> {
-  return get(
-    `/bridge/status?txHash=${txHash}&fromChainId=${fromChainId}&toChainId=${toChainId}`,
-  );
-}
-
-/** Agent executes the bridge tx — user never needs CELO. */
-export function executeBridgeSend(params: {
-  fromTokenAddress: string;
-  fromAmount:       string;
-  fromWallet:       string;
-  toChainId:        number;
-  toTokenAddress:   string;
-  toAddress:        string;
-}): Promise<{ txHash: string; explorerUrl: string }> {
-  return post("/bridge/execute", params);
 }
 
 // ── Voice notes (speech → text) ─────────────────────────────────────────────

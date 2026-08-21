@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import Image from "next/image";
 
-type Action = "cross-chain" | "tx-history" | "settings" | "deposit";
+type Action = "tx-history" | "settings" | "deposit";
 
 interface GridItem {
   label:    string;
@@ -58,7 +58,7 @@ const LIST_ITEMS: ListItem[] = [
   {
     label: "Cross-chain send",
     desc:  "Send to another chain",
-    action: "cross-chain",
+    template: "I have 10 USDC on Celo but need it on Base",
     icon: <Image src="/Vector%202.png" alt="" width={20} height={20} />,
   },
   {
@@ -95,14 +95,13 @@ const LIST_ITEMS: ListItem[] = [
 
 interface Props {
   onSelect:        (template: string) => void;
-  onOpenCrossChain: () => void;
   onOpenTxHistory:  () => void;
   onOpenSettings:   () => void;
   onOpenDeposit:   () => void;
   onClose:         () => void;
 }
 
-export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpenSettings, onOpenDeposit, onClose }: Props) {
+export function CommandMenu({ onSelect, onOpenTxHistory, onOpenSettings, onOpenDeposit, onClose }: Props) {
   // Close on Escape key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -111,8 +110,7 @@ export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpe
   }, [onClose]);
 
   const run = (item: { template?: string; action?: Action }) => {
-    if (item.action === "cross-chain") onOpenCrossChain();
-    else if (item.action === "tx-history") onOpenTxHistory();
+    if (item.action === "tx-history") onOpenTxHistory();
     else if (item.action === "settings") onOpenSettings();
     else if (item.action === "deposit") onOpenDeposit();
     else if (item.template) onSelect(item.template);
@@ -163,14 +161,7 @@ export function CommandMenu({ onSelect, onOpenCrossChain, onOpenTxHistory, onOpe
               >
                 <span className="flex-shrink-0">{item.icon}</span>
                 <span>
-                  <p className="text-sm font-bold text-white flex items-center gap-1.5">
-                    {item.label}
-                    {item.action === "cross-chain" && (
-                      <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-cowry-border text-cowry-muted">
-                        Soon
-                      </span>
-                    )}
-                  </p>
+                  <p className="text-sm font-bold text-white">{item.label}</p>
                   <p className="text-xs text-cowry-muted">{item.desc}</p>
                 </span>
               </button>

@@ -5,6 +5,7 @@ import { TransactionCard } from "./TransactionCard";
 import { TxHistoryCard } from "./TxHistoryCard";
 import { RemittanceQuoteCard } from "./RemittanceQuoteCard";
 import { CryptoWithdrawalQuoteCard } from "./CryptoWithdrawalQuoteCard";
+import { CrossChainSendQuoteCard } from "./CrossChainSendQuoteCard";
 import { OnRampCard } from "./OnRampCard";
 import { DepositAddressCard } from "./DepositAddressCard";
 import { SendSuccessCard } from "./SendSuccessCard";
@@ -24,13 +25,15 @@ interface Props {
   activeQuoteReference: string | null;
   /** Same idea as activeQuoteReference, for the crypto-withdrawal-to-wallet quote card. */
   activeWithdrawalReference: string | null;
+  /** Same idea as activeQuoteReference, for the cross-chain-send quote card. */
+  activeCrossChainSendReference: string | null;
   /** True while a send is being confirmed (PIN open or in flight) — freezes the active quote card so it can't be double-tapped. */
   sendPending: boolean;
 }
 
 export function MessageBubble({
   message, onConfirm, onCancel, onSign, onApprove, onViewAllTxHistory, txLoading,
-  activeQuoteReference, activeWithdrawalReference, sendPending,
+  activeQuoteReference, activeWithdrawalReference, activeCrossChainSendReference, sendPending,
 }: Props) {
   const isUser = message.role === "user";
   const r = message.response;
@@ -40,8 +43,8 @@ export function MessageBubble({
 
       <div className={`max-w-[82%] flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
 
-        {/* Bubble — remittance/withdrawal quotes fold this text into the card below instead */}
-        {r?.type !== "remittance_quote" && r?.type !== "crypto_withdrawal_quote" && r?.type !== "send_success" && (
+        {/* Bubble — remittance/withdrawal/cross-chain quotes fold this text into the card below instead */}
+        {r?.type !== "remittance_quote" && r?.type !== "crypto_withdrawal_quote" && r?.type !== "cross_chain_send_quote" && r?.type !== "send_success" && (
           <div
             className={`px-4 py-3 rounded-[22px] text-sm whitespace-pre-wrap leading-relaxed ${
               isUser
@@ -166,6 +169,22 @@ export function MessageBubble({
             chain={r.chain}
             toAddress={r.toAddress}
             disabled={r.reference !== activeWithdrawalReference || sendPending}
+            onConfirm={onConfirm}
+            onCancel={onCancel}
+          />
+        )}
+
+        {/* Cross-chain send quote awaiting confirm */}
+        {r?.type === "cross_chain_send_quote" && (
+          <CrossChainSendQuoteCard
+            description={message.text}
+            amount={r.amount}
+            tokenSymbol={r.tokenSymbol}
+            sourceChain={r.sourceChain}
+            destinationChain={r.destinationChain}
+            toAddress={r.toAddress}
+            feeAmount={r.feeAmount}
+            disabled={r.reference !== activeCrossChainSendReference || sendPending}
             onConfirm={onConfirm}
             onCancel={onCancel}
           />

@@ -5,13 +5,15 @@ import {
   sendChatMessage,
   createOfframpSend,
   initiateCryptoWithdrawal,
+  initiateCrossChainSend,
   saveRecipient,
   type PublicUser,
   type RemittanceDraft,
   type CryptoWithdrawalDraft,
+  type CrossChainSendDraft,
 } from "@/lib/backendApi";
 import { formatFiat, formatToken } from "@/lib/currency";
-import { computeCryptoWithdrawalFeeSplit } from "@/lib/cryptoWithdrawalFee";
+import { computeCryptoWithdrawalFeeSplit, computeCrossChainSendFeeSplit } from "@/lib/cryptoWithdrawalFee";
 import { sendTransaction, waitForTransaction } from "@/lib/wallet";
 import type { Message, ChatResponse, EncodedTxJson } from "@/lib/types";
 
@@ -44,6 +46,10 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
   const [activeWithdrawalReference, setActiveWithdrawalReference] = useState<string | null>(null);
   /** Set right after a chat-confirmed withdrawal is submitted — opens the withdrawal receipt modal. */
   const [receiptWithdrawalId, setReceiptWithdrawalId] = useState<string | null>(null);
+  /** Same idea as activeSendReference, for the cross-chain-send quote card. */
+  const [activeCrossChainSendReference, setActiveCrossChainSendReference] = useState<string | null>(null);
+  /** Set right after a chat-confirmed cross-chain send is submitted — opens its receipt modal. */
+  const [receiptCrossChainSendId, setReceiptCrossChainSendId] = useState<string | null>(null);
   const sessionIdRef = useRef(newSessionId());
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -56,6 +62,8 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
    * always clears the other here too.
    */
   const pendingCryptoWithdrawalRef = useRef<CryptoWithdrawalDraft | null>(null);
+  /** Mirrors pendingSendRef for the cross-chain-send flow — same one-draft-at-a-time invariant as pendingCryptoWithdrawalRef. */
+  const pendingCrossChainSendRef = useRef<CrossChainSendDraft | null>(null);
   /** Set right after a send completes — the next message is read as a nickname (or "skip"), not a normal chat message. */
   const pendingSaveRecipientRef = useRef<{
     institution: string;
@@ -111,10 +119,38 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
    * forwards the message and turns a resolved draft into a confirm card.
    */
   const fetchAgentResponse = useCallback(async (text: string, signal?: AbortSignal): Promise<ChatResponse> => {
-    const { reply, pendingSend, pendingCryptoWithdrawal } = await sendChatMessage(text, signal);
+    const { reply, pendingSend, pendingCryptoWithdrawal, pendingCrossChainSend } = await sendChatMessage(text, signal);
+    if (pendingCrossChainSend) {
+      pendingSendRef.current = null;
+      setActiveSendReference(null);
+      pendingCryptoWithdrawalRef.current = null;
+      setActiveWithdrawalReference(null);
+      pendingCrossChainSendRef.current = pendingCrossChainSend;
+      const reference = crypto.randomUUID();
+      setActiveCrossChainSendReference(reference);
+      // Platform-fee estimate only — the bridge's own destination-amount
+      // quote is only ever accurate in `reply` (backend prose), never
+      // here. Uses the cross-chain-specific fee floor (much smaller than
+      // same-chain withdrawal's — see cryptoWithdrawalFee.ts's own
+      // comment), never computeCryptoWithdrawalFeeSplit.
+      const split = computeCrossChainSendFeeSplit(pendingCrossChainSend.amount);
+      return {
+        type: "cross_chain_send_quote",
+        preview: reply,
+        amount: formatToken(pendingCrossChainSend.amount),
+        feeAmount: split ? formatToken(split.feeAmount) : "0.00",
+        tokenSymbol: pendingCrossChainSend.tokenSymbol,
+        sourceChain: pendingCrossChainSend.sourceChain,
+        destinationChain: pendingCrossChainSend.destinationChain,
+        toAddress: pendingCrossChainSend.toAddress,
+        reference,
+      };
+    }
     if (pendingCryptoWithdrawal) {
       pendingSendRef.current = null;
       setActiveSendReference(null);
+      pendingCrossChainSendRef.current = null;
+      setActiveCrossChainSendReference(null);
       pendingCryptoWithdrawalRef.current = pendingCryptoWithdrawal;
       const reference = crypto.randomUUID();
       setActiveWithdrawalReference(reference);
@@ -140,6 +176,8 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     if (pendingSend) {
       pendingCryptoWithdrawalRef.current = null;
       setActiveWithdrawalReference(null);
+      pendingCrossChainSendRef.current = null;
+      setActiveCrossChainSendReference(null);
       pendingSendRef.current = pendingSend;
       setActiveSendReference(pendingSend.reference);
       const receiveAmount = (parseFloat(pendingSend.netAmount) * parseFloat(pendingSend.rate)).toFixed(2);
@@ -277,7 +315,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
 
   /** Called when user taps Confirm on the send (or withdrawal) quote card — opens PIN verification. */
   const confirm = useCallback(() => {
-    if (!pendingSendRef.current && !pendingCryptoWithdrawalRef.current) return;
+    if (!pendingSendRef.current && !pendingCryptoWithdrawalRef.current && !pendingCrossChainSendRef.current) return;
     if (!user?.pinSet) {
       addMessage({
         role: "bot",
@@ -294,12 +332,15 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     setActiveSendReference(null);
     pendingCryptoWithdrawalRef.current = null;
     setActiveWithdrawalReference(null);
+    pendingCrossChainSendRef.current = null;
+    setActiveCrossChainSendReference(null);
     addMessage({ role: "bot", text: "Okay, cancelled." });
   }, [addMessage]);
 
   const closePinVerify = useCallback(() => setPinVerifyOpen(false), []);
   const closeReceipt = useCallback(() => setReceiptSendId(null), []);
   const closeWithdrawalReceipt = useCallback(() => setReceiptWithdrawalId(null), []);
+  const closeCrossChainSendReceipt = useCallback(() => setReceiptCrossChainSendId(null), []);
 
   /**
    * VerifyPinModal already confirmed this PIN is correct before calling this
@@ -311,6 +352,37 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
   const onPinVerified = useCallback(
     async (pin: string) => {
       setPinVerifyOpen(false);
+
+      const crossChainDraft = pendingCrossChainSendRef.current;
+      if (crossChainDraft) {
+        setLoading(true);
+        try {
+          const { send: ccSend } = await initiateCrossChainSend({
+            sourceChain: crossChainDraft.sourceChain,
+            destinationChain: crossChainDraft.destinationChain,
+            amount: crossChainDraft.amount,
+            toAddress: crossChainDraft.toAddress,
+            pin,
+            tokenSymbol: crossChainDraft.tokenSymbol,
+          });
+          pendingCrossChainSendRef.current = null;
+          setActiveCrossChainSendReference(null);
+          setReceiptCrossChainSendId(ccSend.id);
+          addMessage({
+            role: "bot",
+            text: `✅ Cross-chain send submitted — ${formatToken(crossChainDraft.amount)} ${crossChainDraft.tokenSymbol} from ${crossChainDraft.sourceChain} to ${crossChainDraft.toAddress} on ${crossChainDraft.destinationChain}.`,
+          });
+        } catch (e) {
+          // The draft stays live (not cleared) so Confirm can be tapped again to retry.
+          addMessage({
+            role: "bot",
+            text: `⚠️ Couldn't complete the cross-chain send: ${e instanceof Error ? e.message : "unknown error"}`,
+          });
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
 
       const withdrawalDraft = pendingCryptoWithdrawalRef.current;
       if (withdrawalDraft) {
@@ -541,6 +613,9 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     activeWithdrawalReference,
     receiptWithdrawalId,
     closeWithdrawalReceipt,
+    activeCrossChainSendReference,
+    receiptCrossChainSendId,
+    closeCrossChainSendReceipt,
   };
 }
 
@@ -555,6 +630,7 @@ function responseToText(r: ChatResponse): string {
     case "tx_history": return `Here are your last ${r.items.length} transaction${r.items.length === 1 ? "" : "s"}:`;
     case "remittance_quote": return r.preview;
     case "crypto_withdrawal_quote": return r.preview;
+    case "cross_chain_send_quote": return r.preview;
     case "send_success":    return r.message;
     default:           return "...";
   }

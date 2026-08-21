@@ -100,6 +100,27 @@ export type ChatResponse =
       reference: string;
     }
   | {
+      /**
+       * A "move funds to a different chain" request chat has fully
+       * resolved, awaiting user confirm — mirrors crypto_withdrawal_quote
+       * but source and destination chains genuinely differ (a real bridge
+       * is involved, not just a same-chain broadcast). feeAmount is only
+       * the platform-fee estimate; the exact amount the destination
+       * receives depends on the bridge's own quote and is only ever
+       * accurate in `preview` (the backend's prose), never computed here.
+       */
+      type: "cross_chain_send_quote";
+      preview: string;
+      amount: string;
+      tokenSymbol: string;
+      sourceChain: string;
+      destinationChain: string;
+      toAddress: string;
+      feeAmount: string;
+      /** Identifies which specific draft this card represents — lets the UI tell a stale card (from earlier in the chat) apart from the one currently actionable. */
+      reference: string;
+    }
+  | {
       /** On-ramp order created — shows virtual bank account for user to pay into. */
       type: "onramp_virtual_account";
       preview: string;
@@ -146,54 +167,3 @@ export type Message = {
   depositMultiChain?: boolean;
 };
 
-// ── Bridge types ──────────────────────────────────────────────────────────────
-
-export type ChainInfo = {
-  chainId: number;
-  name: string;
-  usdc?: string;
-  usdm?: string;
-  usdcDecimals: number;
-  usdmDecimals?: number;
-};
-
-export type BridgeChainsConfig = {
-  source: ChainInfo;
-  destinations: ChainInfo[];
-};
-
-export type BridgeQuoteResult = {
-  quoteId: string;
-  tool: string;
-  summary: string;
-  fromTokenAddress: string;
-  fromAmount: string;
-  /** LI.FI spender — approve this before the agent executes the bridge tx */
-  approvalAddress: string;
-  /** Total platform fee in USD (includes relay cost) */
-  platformFeeUSD?: number;
-  preflight?: {
-    needsApproval: boolean;
-    sufficientBalance: boolean;
-  };
-  transactionRequest: {
-    to: string;
-    data: string;
-    value: string;
-    chainId: number;
-    gasLimit?: string;
-    gasPrice?: string;
-  };
-  estimate: {
-    fromAmount: string;
-    toAmount: string;
-    toAmountMin: string;
-    executionDuration: number;
-    feeCosts: { name: string; amountUSD: string }[];
-    gasCosts: { amountUSD: string }[];
-  };
-};
-
-export type BridgeStatus =
-  | { status: "PENDING" | "FAILED" | "NOT_FOUND" }
-  | { status: "DONE"; toTxHash: string; receivedAmount: string };

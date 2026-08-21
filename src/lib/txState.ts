@@ -50,3 +50,27 @@ export function describeCryptoWithdrawalState(state: string): StateBadge {
       return { label: "Processing", className: AMBER };
   }
 }
+
+// STUCK is deliberately its own label, distinct from "Failed" — the
+// source-chain leg already confirmed (real, final, irreversible), only the
+// destination leg is taking longer than usual. Framing it as "Failed"
+// (or in red) would wrongly suggest nothing happened and/or an auto-refund
+// is coming, neither true — it gets the same calm amber treatment as any
+// other in-progress state. Only FAILED (never left the user's balance)
+// gets red.
+export function describeCrossChainSendState(state: string): StateBadge {
+  switch (state) {
+    case "COMPLETE":
+      return { label: "Delivered", className: GREEN };
+    case "STUCK":
+      return { label: "Almost there", className: AMBER };
+    case "FAILED":
+      return { label: "Failed", className: RED };
+    case "REFUNDED":
+      return { label: "Refunded", className: GRAY };
+    case "BRIDGING":
+      return { label: "Bridging", className: AMBER };
+    default:
+      return { label: "Processing", className: AMBER };
+  }
+}

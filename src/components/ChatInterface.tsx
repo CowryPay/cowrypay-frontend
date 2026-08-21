@@ -9,13 +9,13 @@ import { useChat }            from "@/hooks/useChat";
 import { useVoiceRecorder }   from "@/hooks/useVoiceRecorder";
 import { transcribeAudio }    from "@/lib/agent";
 import { MessageBubble }      from "./MessageBubble";
-import { CrossChainSendPanel } from "./CrossChainSendPanel";
 import { CommandMenu }        from "./CommandMenu";
 import { TransactionHistoryModal } from "./TransactionHistoryModal";
 import { SettingsPanel }      from "./SettingsPanel";
 import { VerifyPinModal }     from "./VerifyPinModal";
 import { ReceiptModal }       from "./ReceiptModal";
 import { CryptoWithdrawalReceiptModal } from "./CryptoWithdrawalReceiptModal";
+import { CrossChainSendReceiptModal } from "./CrossChainSendReceiptModal";
 import { NotificationBell }   from "./NotificationBell";
 import { AppLockScreen }      from "./AppLockScreen";
 import { DepositModal }       from "./DepositModal";
@@ -30,13 +30,13 @@ function formatDuration(totalSec: number): string {
 
 type Suggestion =
   | { kind: "text"; text: string; icon: string }
-  | { kind: "action"; text: string; icon: string; action: "cross-chain" | "tx-history" | "deposit" };
+  | { kind: "action"; text: string; icon: string; action: "tx-history" | "deposit" };
 
 const SUGGESTIONS: Suggestion[] = [
   { kind: "action", text: "Deposit",                             icon: "/Vector%201.png", action: "deposit" },
   { kind: "text",   text: "Send $20 to mobile money in Kenya",   icon: "/Vector.png" },
   { kind: "text",   text: "What's my balance",                   icon: "/Vector%201.png" },
-  { kind: "action", text: "Cross-chain send",                    icon: "/Vector%202.png", action: "cross-chain" },
+  { kind: "text",   text: "I have 10 USDC on Celo but need it on Base", icon: "/Vector%202.png" },
   { kind: "text",   text: "Withdraw 20 USDC to a wallet address", icon: "/Vector%202.png" },
   { kind: "text",   text: "Send $50 to a bank account in Nigeria", icon: "/Vector.png" },
   { kind: "action", text: "Transaction History",                 icon: "/Group%209.png", action: "tx-history" },
@@ -60,6 +60,7 @@ export function ChatInterface() {
     pinVerifyOpen, closePinVerify, onPinVerified, activeSendReference,
     receiptSendId, closeReceipt,
     activeWithdrawalReference, receiptWithdrawalId, closeWithdrawalReceipt,
+    activeCrossChainSendReference, receiptCrossChainSendId, closeCrossChainSendReceipt,
   } = useChat(user, (chain) => { setDepositInitialChain(chain); setShowDeposit(true); });
 
   const [locked, setLocked] = useState(false);
@@ -93,7 +94,6 @@ export function ChatInterface() {
   const hasUserMessage = messages.some((m) => m.role === "user");
 
   const [input,       setInput]       = useState("");
-  const [showCrossChainSend, setShowCrossChainSend] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
   const [showTxHistory, setShowTxHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -136,7 +136,12 @@ export function ChatInterface() {
     if (!r) return;
     signAndSend(r.tx.transactions, r.tx.token.symbol);
   };
-  const crossChainComingSoon = () => addBotMessage("🚧 Cross-chain send is coming soon!");
+  // Cross-chain send is chat-only (same reasoning as withdraw-to-wallet) —
+  // this just pre-fills the input like a text suggestion, it doesn't send.
+  const promptCrossChainSend = () => {
+    setInput("I have 10 USDC on Celo but need it on Base");
+    inputRef.current?.focus();
+  };
 
   // Not signed in — redirecting to /signin (see the effect above). Show a
   // blank loading state instead of flashing broken chat while that happens.
@@ -188,21 +193,18 @@ export function ChatInterface() {
           </button>
 
           <button
-            onClick={crossChainComingSoon}
+            onClick={promptCrossChainSend}
             className="lg:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
-            title="Cross-chain send (coming soon)"
+            title="Cross-chain send"
           >
             <Image src="/Vector%202.png" alt="Send" width={18} height={18} />
           </button>
           <button
-            onClick={crossChainComingSoon}
+            onClick={promptCrossChainSend}
             className="hidden lg:flex items-center gap-2 text-sm font-medium text-white border border-cowry-border rounded-full pl-4 pr-3 py-1.5 hover:border-cowry-green/40 transition-colors"
           >
             Cross-chain send
             <Image src="/Vector%202.png" alt="" width={16} height={16} />
-            <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-cowry-border text-cowry-muted">
-              Soon
-            </span>
           </button>
 
           <button
@@ -225,8 +227,7 @@ export function ChatInterface() {
                   key={s.text}
                   onClick={() => {
                     if (s.kind === "action") {
-                      if (s.action === "cross-chain") crossChainComingSoon();
-                      else if (s.action === "tx-history") setShowTxHistory(true);
+                      if (s.action === "tx-history") setShowTxHistory(true);
                       else if (s.action === "deposit") { setDepositInitialChain(null); setShowDeposit(true); }
                     } else {
                       setInput(s.text);
@@ -239,11 +240,6 @@ export function ChatInterface() {
                     <Image src={s.icon} alt="" width={16} height={16} />
                   </span>
                   {s.text}
-                  {s.kind === "action" && s.action === "cross-chain" && (
-                    <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-cowry-border text-cowry-muted">
-                      Soon
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
@@ -264,6 +260,7 @@ export function ChatInterface() {
             txLoading={txLoading}
             activeQuoteReference={activeSendReference}
             activeWithdrawalReference={activeWithdrawalReference}
+            activeCrossChainSendReference={activeCrossChainSendReference}
             sendPending={loading || pinVerifyOpen}
           />
         ))}
@@ -376,21 +373,12 @@ export function ChatInterface() {
         </div>
       )}
 
-      {showCrossChainSend && address && (
-        <CrossChainSendPanel
-          walletAddress={address}
-          onClose={() => setShowCrossChainSend(false)}
-          onSuccess={(msg) => { setShowCrossChainSend(false); addBotMessage(msg); }}
-        />
-      )}
-
       {showCommands && (
         <CommandMenu
           onSelect={(template) => {
             setInput(template);
             setTimeout(() => inputRef.current?.focus(), 50);
           }}
-          onOpenCrossChain={() => { setShowCommands(false); crossChainComingSoon(); }}
           onOpenTxHistory={() => { setShowCommands(false); setShowTxHistory(true); }}
           onOpenSettings={() => { setShowCommands(false); setShowSettings(true); }}
           onOpenDeposit={() => { setShowCommands(false); setDepositInitialChain(null); setShowDeposit(true); }}
@@ -416,6 +404,10 @@ export function ChatInterface() {
 
       {receiptWithdrawalId && wallet && (
         <CryptoWithdrawalReceiptModal withdrawalId={receiptWithdrawalId} wallet={wallet} onClose={closeWithdrawalReceipt} />
+      )}
+
+      {receiptCrossChainSendId && (
+        <CrossChainSendReceiptModal crossChainSendId={receiptCrossChainSendId} onClose={closeCrossChainSendReceipt} />
       )}
 
       {showDeposit && wallet && (

@@ -10,15 +10,13 @@ const CURRENCIES = [
   { flag: "/Malawi.png",   code: "MWK" },
 ];
 
+// The real, live cross-chain-send pairs (CCTP for Base/Solana, LI.FI for
+// Celo) — Optimism deliberately excluded, same restraint already applied
+// to deposits (no off-ramp provider settles there in practice yet).
 const CHAINS = [
-  { name: "Optimism", logo: "/Optimism.svg" },
-  { name: "Arbitrum", logo: "/Arbitrum.svg" },
-  { name: "BNB Chain", logo: "/BNBChain.svg" },
-  { name: "Scroll",   logo: "/Scroll.svg" },
-  { name: "Linea",    logo: "/Linea.svg" },
-  { name: "Base",     logo: "/Base.svg" },
-  { name: "Polygon",  logo: "/Polygon.svg" },
-  { name: "Ethereum", logo: "/Ethereum.svg" },
+  { name: "Celo",   logo: "/celo.png" },
+  { name: "Base",   logo: "/Base.svg" },
+  { name: "Solana", logo: null },
 ];
 
 const FEATURES = [
@@ -37,7 +35,7 @@ const FEATURES = [
   {
     img: "/send.png",
     title: "Cross-Chain Send",
-    desc: "Send Celo USDC or USDm to anyone, they receive USDC on Ethereum, Base, Arbitrum, and 8 more chains.",
+    desc: "Move USDC between Celo, Base, and Solana right in the app — no bridge UI, no gas fees, no external wallet.",
     tint: "rgba(99,102,241,0.08)",
   },
   {
@@ -143,7 +141,13 @@ export default function LandingPage() {
                   key={`${c.name}-${i}`}
                   className="flex items-center gap-3 bg-cowry-card border border-cowry-border rounded-full px-5 py-3 flex-shrink-0"
                 >
-                  <Image src={c.logo} alt={c.name} width={32} height={32} className="rounded-full object-contain" />
+                  {c.logo ? (
+                    <Image src={c.logo} alt={c.name} width={32} height={32} className="rounded-full object-contain" />
+                  ) : (
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-cowry-green/20 border border-cowry-green/40 text-xs font-bold text-cowry-green">
+                      {c.name.slice(0, 1)}
+                    </span>
+                  )}
                   <span className="text-base font-medium text-white">{c.name}</span>
                 </div>
               ))}

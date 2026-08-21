@@ -268,17 +268,41 @@ export type CryptoWithdrawalDraft = {
 };
 
 /**
+ * A "move funds to a different chain" request chat has fully resolved
+ * (amount, destination address, source/destination chain, token all known,
+ * balance-checked, and a real bridge quote obtained) but not money-moved
+ * yet — same §9 boundary as the other two drafts above. Distinct from
+ * CryptoWithdrawalDraft: sourceChain and destinationChain genuinely
+ * differ here, which is what makes this a bridge instead of a same-chain
+ * withdrawal.
+ */
+export type CrossChainSendDraft = {
+  amount:           string;
+  toAddress:        string;
+  sourceChain:      string;
+  destinationChain: string;
+  tokenSymbol:      string;
+};
+
+/**
  * Real backend chat — deterministic balance/address/help answers, an LLM
  * that parses free-form "send $X to Y" requests into a multi-turn remittance
  * draft (server-persisted between messages), and a Groq/Claude fallback for
  * general conversation. `pendingSend` is present once a send request fully
  * resolves — see RemittanceDraft. `pendingCryptoWithdrawal` is the same idea
  * for a "withdraw to wallet" request — see CryptoWithdrawalDraft.
+ * `pendingCrossChainSend` is the same idea for moving funds to a different
+ * chain — see CrossChainSendDraft.
  */
 export function sendChatMessage(
   message: string,
   signal?: AbortSignal,
-): Promise<{ reply: string; pendingSend?: RemittanceDraft; pendingCryptoWithdrawal?: CryptoWithdrawalDraft }> {
+): Promise<{
+  reply: string;
+  pendingSend?: RemittanceDraft;
+  pendingCryptoWithdrawal?: CryptoWithdrawalDraft;
+  pendingCrossChainSend?: CrossChainSendDraft;
+}> {
   return authedFetch("/chat", { method: "POST", body: JSON.stringify({ message }), signal });
 }
 
@@ -409,4 +433,76 @@ export function getCryptoWithdrawal(
 /** Recent crypto withdrawals for the signed-in user, newest first — powers Transaction History. */
 export function getCryptoWithdrawals(): Promise<{ withdrawals: CryptoWithdrawal[] }> {
   return authedFetch("/crypto-withdrawals");
+}
+
+// ── Cross-chain send (crypto → crypto, bridged to a different chain) ───────
+
+/**
+ * Richer lifecycle than a same-chain CryptoWithdrawal — real funds are, for
+ * a genuine window, in flight on a bridge with no synchronous fallback if
+ * the destination leg fails. STUCK means the source-chain burn/lock
+ * already confirmed (real, final, on-chain) but the destination leg
+ * didn't complete — NOT auto-refunded, needs manual resolution; treat it
+ * as distinct from FAILED (which failed before the source leg confirmed,
+ * and is safe to auto-refund) when showing this to a user.
+ */
+export type CrossChainSendState =
+  | "PENDING"
+  | "SOURCE_BROADCAST"
+  | "SOURCE_CONFIRMED"
+  | "BRIDGING"
+  | "DESTINATION_BROADCAST"
+  | "COMPLETE"
+  | "FAILED"
+  | "STUCK"
+  | "REFUNDED";
+
+export type CrossChainSend = {
+  id:                     string;
+  tokenSymbol:            string;
+  sourceChain:            string;
+  destinationChain:       string;
+  amountHuman:            string;
+  feeAmount:              string;
+  netAmount:              string;
+  toAddress:              string;
+  reference:              string;
+  sourceTxHash:           string | null;
+  destinationTxHash:      string | null;
+  sourceConfirmedAt:      string | null;
+  destinationConfirmedAt: string | null;
+  state:                  CrossChainSendState;
+  createdAt:              string;
+  updatedAt:              string;
+};
+
+export type CrossChainSendTransition = {
+  toState:   CrossChainSendState;
+  createdAt: string;
+};
+
+/**
+ * Bridges a balance from one chain to a different one, to any address —
+ * CCTP for Base/Optimism/Solana pairs, LI.FI for anything touching Celo.
+ * Chat can build a draft (see CrossChainSendDraft) but never calls this
+ * itself, same §9 boundary as initiateCryptoWithdrawal. The PIN is
+ * verified server-side inside this call.
+ */
+export function initiateCrossChainSend(input: {
+  sourceChain:      string;
+  destinationChain: string;
+  amount:           string;
+  toAddress:        string;
+  pin:              string;
+  /** Omit for USDC. */
+  tokenSymbol?:     string;
+}): Promise<{ send: CrossChainSend }> {
+  return authedFetch("/cross-chain-sends", { method: "POST", body: JSON.stringify(input) });
+}
+
+/** Single cross-chain send lookup with its state-transition history — used to poll one until it settles. */
+export function getCrossChainSend(
+  id: string,
+): Promise<{ send: CrossChainSend; transitions: CrossChainSendTransition[] }> {
+  return authedFetch(`/cross-chain-sends/${id}`);
 }
