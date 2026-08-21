@@ -33,7 +33,7 @@ export function RemittanceQuoteCard({
     <div className="w-full bg-cowry-dark border border-cowry-border rounded-2xl px-5 py-5">
 
       {description && (
-        <p className="text-sm text-white whitespace-pre-wrap leading-relaxed mb-5">{description}</p>
+        <p className="text-sm text-white whitespace-pre-wrap break-words leading-relaxed mb-5">{description}</p>
       )}
 
       {/* Header row */}

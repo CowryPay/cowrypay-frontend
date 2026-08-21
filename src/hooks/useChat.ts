@@ -129,16 +129,32 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
       const reference = crypto.randomUUID();
       setActiveCrossChainSendReference(reference);
       // Platform-fee estimate only — the bridge's own destination-amount
-      // quote is only ever accurate in `reply` (backend prose), never
+      // quote is only ever accurate in the backend's own reply text, never
       // here. Uses the cross-chain-specific fee floor (much smaller than
       // same-chain withdrawal's — see cryptoWithdrawalFee.ts's own
       // comment), never computeCryptoWithdrawalFeeSplit.
       const split = computeCrossChainSendFeeSplit(pendingCrossChainSend.amount);
+      const ccAmount = formatToken(pendingCrossChainSend.amount);
+      const ccFee = split ? formatToken(split.feeAmount) : "0.00";
+      // Built client-side, same as remittance_quote's preview below —
+      // deliberately does NOT interpolate the raw backend reply (or the
+      // address) into this prose: a 42-char unbroken address mid-sentence
+      // overflows a narrow card with no word-break opportunity. The
+      // address gets its own dedicated, properly-wrapped "To" field on
+      // the card instead.
+      const ccPreview = [
+        "🌉 Cross-Chain Send",
+        `You send: ${ccAmount} ${pendingCrossChainSend.tokenSymbol}`,
+        `Route: ${pendingCrossChainSend.sourceChain} → ${pendingCrossChainSend.destinationChain}`,
+        `Est. fee: ${ccFee} ${pendingCrossChainSend.tokenSymbol}`,
+        "",
+        "Reply confirm to send, or cancel to abort.",
+      ].join("\n");
       return {
         type: "cross_chain_send_quote",
-        preview: reply,
-        amount: formatToken(pendingCrossChainSend.amount),
-        feeAmount: split ? formatToken(split.feeAmount) : "0.00",
+        preview: ccPreview,
+        amount: ccAmount,
+        feeAmount: ccFee,
         tokenSymbol: pendingCrossChainSend.tokenSymbol,
         sourceChain: pendingCrossChainSend.sourceChain,
         destinationChain: pendingCrossChainSend.destinationChain,
@@ -157,16 +173,31 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
       // No live quote endpoint for withdrawals (unlike off-ramp sends, which
       // lock a real provider order) — mirrors the backend's own fee formula
       // client-side so the card isn't stuck saying "No fee" like before.
-      // The backend's `reply` text already states its own exact computed
-      // fee in prose; this should match unless the deployed fee env vars
-      // were changed from their defaults (see cryptoWithdrawalFee.ts).
+      // This should match the backend's own computed fee unless the
+      // deployed fee env vars were changed from their defaults (see
+      // cryptoWithdrawalFee.ts).
       const split = computeCryptoWithdrawalFeeSplit(pendingCryptoWithdrawal.amount);
+      const wAmount = formatToken(pendingCryptoWithdrawal.amount);
+      const wFee = split ? formatToken(split.feeAmount) : "0.00";
+      const wNet = split ? formatToken(split.netAmount) : wAmount;
+      // Built client-side, same as remittance_quote's preview below —
+      // deliberately does NOT interpolate the raw backend reply (or the
+      // address) into this prose, same overflow reasoning as the
+      // cross-chain-send preview above.
+      const wPreview = [
+        "📤 Wallet Withdrawal",
+        `You send: ${wAmount} ${pendingCryptoWithdrawal.tokenSymbol} (${pendingCryptoWithdrawal.chain})`,
+        `Fee: ${wFee} ${pendingCryptoWithdrawal.tokenSymbol}`,
+        `You'll receive: ${wNet} ${pendingCryptoWithdrawal.tokenSymbol}`,
+        "",
+        "Reply confirm to send, or cancel to abort.",
+      ].join("\n");
       return {
         type: "crypto_withdrawal_quote",
-        preview: reply,
-        amount: formatToken(pendingCryptoWithdrawal.amount),
-        feeAmount: split ? formatToken(split.feeAmount) : "0.00",
-        netAmount: split ? formatToken(split.netAmount) : formatToken(pendingCryptoWithdrawal.amount),
+        preview: wPreview,
+        amount: wAmount,
+        feeAmount: wFee,
+        netAmount: wNet,
         tokenSymbol: pendingCryptoWithdrawal.tokenSymbol,
         chain: pendingCryptoWithdrawal.chain,
         toAddress: pendingCryptoWithdrawal.toAddress,
