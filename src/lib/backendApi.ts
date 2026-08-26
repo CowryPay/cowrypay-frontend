@@ -506,3 +506,8 @@ export function getCrossChainSend(
 ): Promise<{ send: CrossChainSend; transitions: CrossChainSendTransition[] }> {
   return authedFetch(`/cross-chain-sends/${id}`);
 }
+
+/** Recent cross-chain sends for the signed-in user, newest first — powers Transaction History. */
+export function getCrossChainSends(): Promise<{ sends: CrossChainSend[] }> {
+  return authedFetch("/cross-chain-sends");
+}

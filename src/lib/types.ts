@@ -134,14 +134,14 @@ export type ChatResponse =
       orderId: string;
     };
 
-/** A merged, display-ready entry from a send, deposit, or crypto withdrawal — powers Transaction History. */
+/** A merged, display-ready entry from a send, deposit, crypto withdrawal, or cross-chain send — powers Transaction History. */
 export type TxHistoryItem = {
   id: string;
-  kind: "send" | "deposit" | "withdrawal";
+  kind: "send" | "deposit" | "withdrawal" | "crossChainSend";
   direction: "sent" | "received";
   amount: string;
   tokenSymbol: string;
-  /** Recipient name for a send, destination address for a withdrawal, or the chain name for a deposit. */
+  /** Recipient name for a send, destination address for a withdrawal/cross-chain send, or the chain name for a deposit. */
   counterparty: string;
   stateLabel: string;
   stateClassName: string;

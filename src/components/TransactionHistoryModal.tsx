@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getSends, getDeposits, getCryptoWithdrawals } from "@/lib/backendApi";
-import { describeSendState, describeDepositState, describeCryptoWithdrawalState } from "@/lib/txState";
+import { getSends, getDeposits, getCryptoWithdrawals, getCrossChainSends } from "@/lib/backendApi";
+import { describeSendState, describeDepositState, describeCryptoWithdrawalState, describeCrossChainSendState } from "@/lib/txState";
 import { explorerUrlFor } from "@/lib/explorer";
 import { shortAddress } from "@/lib/wallet";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,6 +9,7 @@ import type { TxHistoryItem } from "@/lib/types";
 import { TxHistoryRow } from "./TxHistoryRow";
 import { ReceiptModal } from "./ReceiptModal";
 import { CryptoWithdrawalReceiptModal } from "./CryptoWithdrawalReceiptModal";
+import { CrossChainSendReceiptModal } from "./CrossChainSendReceiptModal";
 
 interface Props {
   onClose: () => void;
@@ -21,10 +22,11 @@ function recipientLabel(recipient: { accountName: string; institutionName?: stri
 }
 
 async function loadHistory(): Promise<TxHistoryItem[]> {
-  const [{ sends }, { deposits }, { withdrawals }] = await Promise.all([
+  const [{ sends }, { deposits }, { withdrawals }, { sends: crossChainSends }] = await Promise.all([
     getSends(),
     getDeposits(),
     getCryptoWithdrawals(),
+    getCrossChainSends(),
   ]);
 
   const sendItems: TxHistoryItem[] = sends.map((s) => {
@@ -80,7 +82,30 @@ async function loadHistory(): Promise<TxHistoryItem[]> {
     };
   });
 
-  return [...sendItems, ...depositItems, ...withdrawalItems].sort(
+  const crossChainSendItems: TxHistoryItem[] = crossChainSends.map((cc) => {
+    const { label, className } = describeCrossChainSendState(cc.state);
+    // Destination hash is the more meaningful "did it land" link once it
+    // exists; falls back to the source hash while still in flight — the
+    // receipt modal (opened via "View receipt") shows both regardless.
+    const txHash = cc.destinationTxHash ?? cc.sourceTxHash;
+    const explorerChain = cc.destinationTxHash ? cc.destinationChain : cc.sourceChain;
+    return {
+      id: cc.id,
+      kind: "crossChainSend",
+      direction: "sent",
+      amount: cc.amountHuman,
+      tokenSymbol: cc.tokenSymbol,
+      counterparty: `${cc.sourceChain} → ${cc.destinationChain}`,
+      stateLabel: label,
+      stateClassName: className,
+      txHash,
+      explorerUrl: explorerUrlFor(explorerChain, txHash),
+      timestamp: cc.createdAt,
+      hasReceipt: true,
+    };
+  });
+
+  return [...sendItems, ...depositItems, ...withdrawalItems, ...crossChainSendItems].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 }
@@ -92,9 +117,11 @@ export function TransactionHistoryModal({ onClose }: Props) {
   const [error, setError] = useState("");
   const [receiptSendId, setReceiptSendId] = useState<string | null>(null);
   const [receiptWithdrawalId, setReceiptWithdrawalId] = useState<string | null>(null);
+  const [receiptCrossChainSendId, setReceiptCrossChainSendId] = useState<string | null>(null);
 
   const handleViewReceipt = (tx: TxHistoryItem) => {
     if (tx.kind === "withdrawal") setReceiptWithdrawalId(tx.id);
+    else if (tx.kind === "crossChainSend") setReceiptCrossChainSendId(tx.id);
     else setReceiptSendId(tx.id);
   };
 
@@ -173,6 +200,13 @@ export function TransactionHistoryModal({ onClose }: Props) {
           withdrawalId={receiptWithdrawalId}
           wallet={wallet}
           onClose={() => setReceiptWithdrawalId(null)}
+        />
+      )}
+
+      {receiptCrossChainSendId && (
+        <CrossChainSendReceiptModal
+          crossChainSendId={receiptCrossChainSendId}
+          onClose={() => setReceiptCrossChainSendId(null)}
         />
       )}
     </div>
