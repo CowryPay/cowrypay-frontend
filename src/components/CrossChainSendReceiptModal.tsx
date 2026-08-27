@@ -11,12 +11,26 @@ import { getErrorMessage } from "@/lib/errors";
 // second contact path just for this screen.
 const SUPPORT_TELEGRAM_URL = "https://t.me/+OV3fAjsqmrtlZmY8";
 
-const POLL_INTERVAL_MS = 3000;
-// Bridging genuinely takes longer than a same-chain broadcast — a higher
-// cap than CryptoWithdrawalReceiptModal's so a real multi-minute CCTP/LI.FI
-// transfer doesn't stop polling while still legitimately in progress.
-const MAX_POLLS = 100;
+// Escalating interval, not a flat one: most sends resolve within a couple
+// minutes (CCTP's FAST transfer mode is 8-20s finality as of 2026-08-27 —
+// see cctpBridge.ts's own comment), so poll quickly at first, but LI.FI
+// (the Celo-touching path) reports its own dynamic executionDuration with
+// no fixed bound, and CCTP itself ran in SLOW mode (~15-20 min) until that
+// same commit — a real, live incident where this modal gave up after 5
+// minutes and silently froze on "Bridging" while the backend's own
+// poller (crossChainSendConfirmationPoller.ts, 30s tick, NO give-up
+// condition) kept retrying every 30s until it genuinely completed 15+
+// minutes later. ~30 minutes of total coverage here, not 5.
+const FAST_POLL_MS = 3000;
+const FAST_POLL_COUNT = 40; // ~2 minutes at the fast interval
+const SLOW_POLL_MS = 15000;
+const SLOW_POLL_COUNT = 112; // ~28 more minutes at the slow interval
+const MAX_POLLS = FAST_POLL_COUNT + SLOW_POLL_COUNT;
 const STOP_POLLING_STATES = new Set(["COMPLETE", "FAILED", "STUCK", "REFUNDED"]);
+
+function nextPollDelay(pollCount: number): number {
+  return pollCount < FAST_POLL_COUNT ? FAST_POLL_MS : SLOW_POLL_MS;
+}
 
 function shortenAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -30,6 +44,12 @@ type Props = {
 export function CrossChainSendReceiptModal({ crossChainSendId, onClose }: Props) {
   const [send, setSend] = useState<CrossChainSend | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // True only if this modal's OWN polling window ran out before the send
+  // reached a terminal state — the backend keeps retrying regardless (see
+  // crossChainSendConfirmationPoller.ts), this just means the user closing
+  // and reopening (or finding it again in Transaction History) is the only
+  // way this screen itself will show further progress.
+  const [gaveUp, setGaveUp] = useState(false);
   const pollsRef = useRef(0);
 
   useEffect(() => {
@@ -42,10 +62,14 @@ export function CrossChainSendReceiptModal({ crossChainSendId, onClose }: Props)
         if (cancelled) return;
         setSend(s);
 
-        if (STOP_POLLING_STATES.has(s.state) || pollsRef.current >= MAX_POLLS) return;
+        if (STOP_POLLING_STATES.has(s.state)) return;
+        if (pollsRef.current >= MAX_POLLS) {
+          setGaveUp(true);
+          return;
+        }
 
         pollsRef.current += 1;
-        timer = setTimeout(poll, POLL_INTERVAL_MS);
+        timer = setTimeout(poll, nextPollDelay(pollsRef.current));
       } catch (e) {
         if (!cancelled) setError(getErrorMessage(e, "Couldn't load this send's status"));
       }
@@ -186,7 +210,13 @@ export function CrossChainSendReceiptModal({ crossChainSendId, onClose }: Props)
                 </>
               )}
 
-              {!isDone && (
+              {!isDone && gaveUp && (
+                <p className="text-xs text-cowry-muted mt-4 max-w-xs">
+                  This is taking longer than usual — it's still processing on our end. Check Transaction History in a bit for the latest status.
+                </p>
+              )}
+
+              {!isDone && !gaveUp && (
                 <p className="text-xs text-cowry-muted mt-4">
                   You can close this — it'll keep processing in the background.
                 </p>
