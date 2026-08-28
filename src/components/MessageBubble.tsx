@@ -46,7 +46,7 @@ export function MessageBubble({
         {/* Bubble — remittance/withdrawal/cross-chain quotes fold this text into the card below instead */}
         {r?.type !== "remittance_quote" && r?.type !== "crypto_withdrawal_quote" && r?.type !== "cross_chain_send_quote" && r?.type !== "send_success" && (
           <div
-            className={`px-4 py-3 rounded-[22px] text-sm whitespace-pre-wrap leading-relaxed ${
+            className={`px-4 py-3 rounded-[22px] text-sm whitespace-pre-wrap break-words leading-relaxed ${
               isUser
                 ? "bg-cowry-green text-white font-medium"
                 : message.depositAddress
