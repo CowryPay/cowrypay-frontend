@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile Safari/Chrome flash a default tap-highlight color on any tap
+   target (links, buttons) the instant you touch it — separate from, and
+   NOT fixed by, any text-color utility class, since it's an overlay, not
+   text. Never themed to the app's green, so every tap on a link or button
+   shows a mismatched system-default flash. Tailwind's own base reset
+   doesn't touch this property, so it needs an explicit override. */
+a, button {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Chat app pages need full height */
 .chat-root {
   height: 100%;
