@@ -155,7 +155,7 @@ export function DepositModal({ wallet, initialChain, onClose }: Props) {
           )}
 
           {view === "solana" && !loading && solanaAddress && (
-            <DepositAddressCard address={solanaAddress} chain="Solana" note="This address also accepts USDT." />
+            <DepositAddressCard address={solanaAddress} chain="Solana" note="Send USDC or USDT on Solana to this address." />
           )}
 
           {view === "stellar" && !loading && stellarWallet && (

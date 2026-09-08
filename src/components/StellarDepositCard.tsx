@@ -62,7 +62,7 @@ export function StellarDepositCard({ address, memo }: Props) {
         </div>
         <CopyRow label="address" value={address} />
         <p className="text-[11px] text-cowry-muted mt-1.5">
-          Accepts USDC and USDT0 on Stellar.
+          Send USDC or USDT0 on Stellar to this address.
         </p>
       </div>
 
