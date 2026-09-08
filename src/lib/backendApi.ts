@@ -285,6 +285,21 @@ export type CrossChainSendDraft = {
 };
 
 /**
+ * A CowryPay-to-CowryPay transfer on Stellar, identified by the
+ * recipient's memo instead of an address — a pure internal ledger
+ * movement (debit sender, credit recipient), no blockchain transaction,
+ * no fee, no confirmation wait. Same §9 boundary as the other drafts:
+ * chat only ever proposes this, the app must show the recipient memo in
+ * full and collect a PIN before calling POST /internal-transfers/stellar
+ * itself.
+ */
+export type InternalTransferDraft = {
+  amount:          string;
+  recipientMemoId: string;
+  tokenSymbol:     string;
+};
+
+/**
  * Real backend chat — deterministic balance/address/help answers, an LLM
  * that parses free-form "send $X to Y" requests into a multi-turn remittance
  * draft (server-persisted between messages), and a Groq/Claude fallback for
@@ -292,7 +307,8 @@ export type CrossChainSendDraft = {
  * resolves — see RemittanceDraft. `pendingCryptoWithdrawal` is the same idea
  * for a "withdraw to wallet" request — see CryptoWithdrawalDraft.
  * `pendingCrossChainSend` is the same idea for moving funds to a different
- * chain — see CrossChainSendDraft.
+ * chain — see CrossChainSendDraft. `pendingInternalTransfer` is the same
+ * idea for a CowryPay-to-CowryPay transfer — see InternalTransferDraft.
  */
 export function sendChatMessage(
   message: string,
@@ -302,6 +318,7 @@ export function sendChatMessage(
   pendingSend?: RemittanceDraft;
   pendingCryptoWithdrawal?: CryptoWithdrawalDraft;
   pendingCrossChainSend?: CrossChainSendDraft;
+  pendingInternalTransfer?: InternalTransferDraft;
 }> {
   return authedFetch("/chat", { method: "POST", body: JSON.stringify({ message }), signal });
 }
@@ -510,4 +527,41 @@ export function getCrossChainSend(
 /** Recent cross-chain sends for the signed-in user, newest first — powers Transaction History. */
 export function getCrossChainSends(): Promise<{ sends: CrossChainSend[] }> {
   return authedFetch("/cross-chain-sends");
+}
+
+// ── Internal transfers (CowryPay → CowryPay, by memo, Stellar only) ────────
+
+/**
+ * A pure ledger movement between two CowryPay users — no chain field
+ * meaningfully varies yet (Stellar-only for now), no state machine: the
+ * backend only ever creates this row once the debit+credit has already
+ * happened atomically, so unlike every other money-moving record here,
+ * there's no pending/failed intermediate state to poll for.
+ */
+export type InternalTransfer = {
+  id:                   string;
+  fromUserId:           string;
+  toUserId:             string;
+  chain:                string;
+  tokenSymbol:          string;
+  amountHuman:          string;
+  recipientIdentifier:  string;
+  reference:            string;
+  createdAt:            string;
+};
+
+/**
+ * Chat can build a draft (see InternalTransferDraft) but never calls this
+ * itself — same §9 boundary as every other money-moving call here. The
+ * PIN is verified server-side inside this call. Resolves or rejects
+ * immediately; there's no async follow-up to poll.
+ */
+export function initiateStellarInternalTransfer(input: {
+  recipientMemoId: string;
+  amount:          string;
+  pin:             string;
+  /** Omit for USDC. */
+  tokenSymbol?:    string;
+}): Promise<{ transfer: InternalTransfer }> {
+  return authedFetch("/internal-transfers/stellar", { method: "POST", body: JSON.stringify(input) });
 }

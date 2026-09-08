@@ -6,6 +6,7 @@ import { TxHistoryCard } from "./TxHistoryCard";
 import { RemittanceQuoteCard } from "./RemittanceQuoteCard";
 import { CryptoWithdrawalQuoteCard } from "./CryptoWithdrawalQuoteCard";
 import { CrossChainSendQuoteCard } from "./CrossChainSendQuoteCard";
+import { InternalTransferQuoteCard } from "./InternalTransferQuoteCard";
 import { OnRampCard } from "./OnRampCard";
 import { DepositAddressCard } from "./DepositAddressCard";
 import { SendSuccessCard } from "./SendSuccessCard";
@@ -27,13 +28,15 @@ interface Props {
   activeWithdrawalReference: string | null;
   /** Same idea as activeQuoteReference, for the cross-chain-send quote card. */
   activeCrossChainSendReference: string | null;
+  /** Same idea as activeQuoteReference, for the internal-transfer quote card. */
+  activeInternalTransferReference: string | null;
   /** True while a send is being confirmed (PIN open or in flight) — freezes the active quote card so it can't be double-tapped. */
   sendPending: boolean;
 }
 
 export function MessageBubble({
   message, onConfirm, onCancel, onSign, onApprove, onViewAllTxHistory, txLoading,
-  activeQuoteReference, activeWithdrawalReference, activeCrossChainSendReference, sendPending,
+  activeQuoteReference, activeWithdrawalReference, activeCrossChainSendReference, activeInternalTransferReference, sendPending,
 }: Props) {
   const isUser = message.role === "user";
   const r = message.response;
@@ -44,7 +47,7 @@ export function MessageBubble({
       <div className={`max-w-[82%] flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
 
         {/* Bubble — remittance/withdrawal/cross-chain quotes fold this text into the card below instead */}
-        {r?.type !== "remittance_quote" && r?.type !== "crypto_withdrawal_quote" && r?.type !== "cross_chain_send_quote" && r?.type !== "send_success" && (
+        {r?.type !== "remittance_quote" && r?.type !== "crypto_withdrawal_quote" && r?.type !== "cross_chain_send_quote" && r?.type !== "internal_transfer_quote" && r?.type !== "send_success" && (
           <div
             className={`px-4 py-3 rounded-[22px] text-sm whitespace-pre-wrap break-words leading-relaxed ${
               isUser
@@ -185,6 +188,19 @@ export function MessageBubble({
             toAddress={r.toAddress}
             feeAmount={r.feeAmount}
             disabled={r.reference !== activeCrossChainSendReference || sendPending}
+            onConfirm={onConfirm}
+            onCancel={onCancel}
+          />
+        )}
+
+        {/* CowryPay-to-CowryPay transfer quote awaiting confirm */}
+        {r?.type === "internal_transfer_quote" && (
+          <InternalTransferQuoteCard
+            description={message.text}
+            amount={r.amount}
+            tokenSymbol={r.tokenSymbol}
+            recipientMemoId={r.recipientMemoId}
+            disabled={r.reference !== activeInternalTransferReference || sendPending}
             onConfirm={onConfirm}
             onCancel={onCancel}
           />

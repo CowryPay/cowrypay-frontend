@@ -121,6 +121,22 @@ export type ChatResponse =
       reference: string;
     }
   | {
+      /**
+       * A CowryPay-to-CowryPay transfer chat has fully resolved, awaiting
+       * user confirm — recipient is identified by memo, not an address,
+       * and there's no fee (a pure internal ledger movement, no
+       * blockchain transaction). No `reply` prose needed beyond what's
+       * shown structurally: no fee/route ambiguity to explain.
+       */
+      type: "internal_transfer_quote";
+      preview: string;
+      amount: string;
+      tokenSymbol: string;
+      recipientMemoId: string;
+      /** Identifies which specific draft this card represents — lets the UI tell a stale card (from earlier in the chat) apart from the one currently actionable. */
+      reference: string;
+    }
+  | {
       /** On-ramp order created — shows virtual bank account for user to pay into. */
       type: "onramp_virtual_account";
       preview: string;
