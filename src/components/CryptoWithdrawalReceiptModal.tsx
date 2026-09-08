@@ -80,7 +80,7 @@ export function CryptoWithdrawalReceiptModal({ withdrawalId, wallet, onClose }: 
   useEffect(() => {
     if (!withdrawal) return;
     const chain = withdrawal.chain.toLowerCase();
-    if (chain === "celo" || chain === "base" || chain === "optimism") {
+    if (chain === "celo" || chain === "base" || chain === "optimism" || chain === "ethereum") {
       setSenderAddress(wallet.address);
       return;
     }

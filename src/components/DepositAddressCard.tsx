@@ -6,8 +6,8 @@ import { QrCode } from "./QrCode";
 // chains are actually offered as a deposit destination, not the broader
 // SUPPORTED_CHAINS registry (Optimism dropped 2026-08: no off-ramp
 // provider settles sends there in practice, so depositing there would
-// strand funds).
-const SELF_CUSTODY_CHAINS = ["Celo", "Base"];
+// strand funds). Ethereum added 2026-09-01 alongside off-ramp support.
+const SELF_CUSTODY_CHAINS = ["Celo", "Base", "Ethereum"];
 
 type Props = {
   address:     string;
