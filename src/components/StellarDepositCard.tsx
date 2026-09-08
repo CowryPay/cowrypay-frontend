@@ -61,6 +61,9 @@ export function StellarDepositCard({ address, memo }: Props) {
           <QrCode value={address} />
         </div>
         <CopyRow label="address" value={address} />
+        <p className="text-[11px] text-cowry-muted mt-1.5">
+          Accepts USDC and USDT0 on Stellar.
+        </p>
       </div>
 
       <div className="bg-cowry-card border border-amber-500/40 rounded-[22px] px-4 py-3">
