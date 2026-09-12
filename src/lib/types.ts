@@ -96,6 +96,8 @@ export type ChatResponse =
       tokenSymbol: string;
       chain: string;
       toAddress: string;
+      /** Stellar-only, optional, non-blocking — an exchange/platform destination often needs one to actually credit the deposit. May arrive already set from a chat-parsed draft, or be added/edited on this card before confirming. */
+      memo?: string;
       /** Identifies which specific draft this card represents — lets the UI tell a stale card (from earlier in the chat) apart from the one currently actionable. */
       reference: string;
     }

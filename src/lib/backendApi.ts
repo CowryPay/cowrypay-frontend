@@ -265,6 +265,8 @@ export type CryptoWithdrawalDraft = {
   toAddress:   string;
   chain:       string;
   tokenSymbol: string;
+  /** Only meaningful on Stellar — an exchange/platform deposit address often needs one to actually credit the deposit. Optional: omitted is a normal, unblocked withdrawal. */
+  memo?:       string;
 };
 
 /**
@@ -436,6 +438,8 @@ export function initiateCryptoWithdrawal(input: {
   pin:         string;
   /** Omit for USDC — only Celo and Solana support anything else right now. */
   tokenSymbol?: string;
+  /** Stellar-only — an exchange/platform destination often needs one to actually credit the deposit. Optional and non-blocking: omitted just withdraws normally. */
+  memo?:        string;
 }): Promise<{ withdrawal: CryptoWithdrawal }> {
   return authedFetch("/crypto-withdrawals", { method: "POST", body: JSON.stringify(input) });
 }

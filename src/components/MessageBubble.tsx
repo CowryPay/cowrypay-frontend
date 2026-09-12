@@ -13,7 +13,8 @@ import { SendSuccessCard } from "./SendSuccessCard";
 
 interface Props {
   message:    Message;
-  onConfirm:  () => void;
+  /** memo is only ever passed by CryptoWithdrawalQuoteCard — every other card calls this with no argument. */
+  onConfirm:  (memo?: string) => void;
   onCancel:   () => void;
   onSign:     (r: Message["response"] & { type: "tx_ready" }) => void;
   onApprove?: (
@@ -171,6 +172,7 @@ export function MessageBubble({
             tokenSymbol={r.tokenSymbol}
             chain={r.chain}
             toAddress={r.toAddress}
+            memo={r.memo}
             disabled={r.reference !== activeWithdrawalReference || sendPending}
             onConfirm={onConfirm}
             onCancel={onCancel}

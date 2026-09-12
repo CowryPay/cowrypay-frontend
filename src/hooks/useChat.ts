@@ -242,6 +242,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
         tokenSymbol: pendingCryptoWithdrawal.tokenSymbol,
         chain: pendingCryptoWithdrawal.chain,
         toAddress: pendingCryptoWithdrawal.toAddress,
+        memo: pendingCryptoWithdrawal.memo,
         reference,
       };
     }
@@ -387,14 +388,25 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     void resetSessionState();
   }, [resetSessionState]);
 
-  /** Called when user taps Confirm on the send (or withdrawal) quote card — opens PIN verification. */
-  const confirm = useCallback(() => {
+  /**
+   * Called when user taps Confirm on the send (or withdrawal) quote card —
+   * opens PIN verification. `memo` is only ever passed by
+   * CryptoWithdrawalQuoteCard (Stellar-only field, editable right on the
+   * card since chat may or may not have already parsed one out of the
+   * user's own message) — written onto the draft ref here, before PIN
+   * entry, so onPinVerified picks up whatever the user last had in that
+   * field, not just whatever chat originally resolved.
+   */
+  const confirm = useCallback((memo?: string) => {
     if (
       !pendingSendRef.current &&
       !pendingCryptoWithdrawalRef.current &&
       !pendingCrossChainSendRef.current &&
       !pendingInternalTransferRef.current
     ) return;
+    if (memo !== undefined && pendingCryptoWithdrawalRef.current) {
+      pendingCryptoWithdrawalRef.current = { ...pendingCryptoWithdrawalRef.current, memo: memo || undefined };
+    }
     if (!user?.pinSet) {
       addMessage({
         role: "bot",
@@ -505,13 +517,14 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
             toAddress: withdrawalDraft.toAddress,
             pin,
             tokenSymbol: withdrawalDraft.tokenSymbol,
+            memo: withdrawalDraft.memo,
           });
           pendingCryptoWithdrawalRef.current = null;
           setActiveWithdrawalReference(null);
           setReceiptWithdrawalId(withdrawal.id);
           addMessage({
             role: "bot",
-            text: `✅ Withdrawal submitted — ${formatToken(withdrawalDraft.amount)} ${withdrawalDraft.tokenSymbol} to ${withdrawalDraft.toAddress} on ${withdrawalDraft.chain}.`,
+            text: `✅ Withdrawal submitted — ${formatToken(withdrawalDraft.amount)} ${withdrawalDraft.tokenSymbol} to ${withdrawalDraft.toAddress} on ${withdrawalDraft.chain}${withdrawalDraft.memo ? ` (memo: ${withdrawalDraft.memo})` : ""}.`,
           });
         } catch (e) {
           // The draft stays live (not cleared) so Confirm can be tapped again to retry.
