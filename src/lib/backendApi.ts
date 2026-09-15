@@ -71,6 +71,20 @@ export function getMe(): Promise<{ user: PublicUser; wallet: Wallet; balances: L
 }
 
 /**
+ * Starts (or resumes) a KYC verification attempt — throws a 400 if the user
+ * is already verified, so callers must check kycStatus first rather than
+ * relying on this to no-op. `providerReference` is what the Dojah widget
+ * needs as `reference_id`; `redirectUrl` stays undefined for Dojah (it's an
+ * embedded widget, not a redirect flow) but is here for a future provider
+ * that might need one. Call this fresh every time the KYC screen opens for
+ * an unverified/rejected user — never cache/reuse an old reference, the
+ * backend marks the user `pending` as soon as this is called.
+ */
+export function startKyc(): Promise<{ providerReference: string; redirectUrl?: string }> {
+  return authedFetch("/kyc/start", { method: "POST" });
+}
+
+/**
  * Solana deposit address — a dedicated per-user on-chain address, unlike
  * the shared EVM one. Auto-provisioned in the background at signup, but
  * idempotent, so this is a safe on-demand fallback if that hasn't finished

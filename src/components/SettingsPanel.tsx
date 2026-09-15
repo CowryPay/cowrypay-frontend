@@ -7,6 +7,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { isBiometricAvailable, hasLocalBiometricCredential, biometricLabel } from "@/lib/biometric";
 import { SetPinModal } from "./SetPinModal";
 import { BiometricSetupModal } from "./BiometricSetupModal";
+import { KycModal } from "./KycModal";
 
 const TELEGRAM_COMMUNITY_URL = "https://t.me/+Qg01n46gCeZmYTU0";
 
@@ -78,6 +79,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("payment");
   const [loggingOut, setLoggingOut] = useState(false);
   const [showSetPin, setShowSetPin] = useState(false);
+  const [showKyc, setShowKyc] = useState(false);
 
   const handleLogOut = async () => {
     setLoggingOut(true);
@@ -202,6 +204,28 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                   {user?.pinSet ? "Change" : "Set PIN"}
                 </button>
               </div>
+              <div className="flex items-center justify-between gap-4 py-4 border-b border-cowry-border">
+                <div>
+                  <p className="text-sm font-semibold text-white">Identity Verification</p>
+                  <p className="text-xs text-cowry-muted mt-0.5">
+                    {user?.kycStatus === "verified"
+                      ? "Verified ✓"
+                      : user?.kycStatus === "pending"
+                        ? "Verification in progress"
+                        : user?.kycStatus === "rejected"
+                          ? "Last attempt didn't pass — you can retry"
+                          : "Required for some transactions"}
+                  </p>
+                </div>
+                {user?.kycStatus !== "verified" && (
+                  <button
+                    onClick={() => setShowKyc(true)}
+                    className="text-xs font-semibold text-cowry-green hover:text-cowry-mint transition-colors border border-cowry-green/40 hover:border-cowry-green rounded-full px-3 py-1.5 flex-shrink-0"
+                  >
+                    {user?.kycStatus === "pending" ? "View" : user?.kycStatus === "rejected" ? "Retry" : "Verify"}
+                  </button>
+                )}
+              </div>
               <SettingRow
                 title={biometricLabel()}
                 desc={
@@ -310,6 +334,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           }}
         />
       )}
+
+      {showKyc && <KycModal onClose={() => setShowKyc(false)} />}
     </div>
   );
 }
