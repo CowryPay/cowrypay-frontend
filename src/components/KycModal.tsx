@@ -280,6 +280,17 @@ export function KycModal({ onClose }: Props) {
                 <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mb-4" />
                 <p className="text-base font-bold text-white">Verifying your identity</p>
                 <p className="text-xs text-cowry-muted mt-2 max-w-xs">This usually takes a few seconds — you can leave this screen, we&apos;ll keep checking.</p>
+                {/* A "pending" attempt with a config error (e.g. a bad widget id) never gets a real
+                    webhook to resolve it — polling alone would wait forever. Backend doesn't block
+                    re-starting while pending (only "verified" is blocked), so this is a real escape
+                    hatch, not just a reassurance message. */}
+                <button
+                  onClick={handleStart}
+                  disabled={starting}
+                  className="mt-6 text-xs text-cowry-muted hover:text-white underline underline-offset-2 transition-colors disabled:opacity-50"
+                >
+                  {starting ? "Starting…" : "Taking too long? Start a new attempt"}
+                </button>
               </>
             )}
 
@@ -290,6 +301,18 @@ export function KycModal({ onClose }: Props) {
                 <p className="text-xs text-cowry-muted mt-2 max-w-xs">
                   This is taking longer than usual — we&apos;ll let you know once it&apos;s done. Check back here anytime.
                 </p>
+                {error && (
+                  <div className="mt-4 px-3 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl max-w-xs">
+                    {error}
+                  </div>
+                )}
+                <button
+                  onClick={handleStart}
+                  disabled={starting}
+                  className="mt-6 w-full max-w-xs bg-cowry-green text-black text-sm font-bold py-3 rounded-full active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {starting ? "Starting…" : "Start a New Attempt"}
+                </button>
                 <a
                   href={SUPPORT_TELEGRAM_URL}
                   target="_blank"
