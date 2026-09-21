@@ -26,12 +26,16 @@ const DOJAH_CONFIGURED = !!DOJAH_APP_ID && !!DOJAH_PUBLIC_KEY && !!DOJAH_WIDGET_
 const SUPPORT_TELEGRAM_URL = "https://t.me/+OV3fAjsqmrtlZmY8";
 
 const POLL_INTERVAL_MS = 4000;
-// ~100s of active polling — comfortably inside the "a minute or two"
-// window the widget's own onSuccess->webhook->DB round trip normally
-// takes. Falls through to the "still processing" screen after this, not
-// an error — the backend keeps resolving it regardless of whether this
-// screen is still open to see it happen.
-const MAX_POLLS = 25;
+// ~5 minutes of active polling. Real verification (document + selfie
+// upload, Dojah's own processing, plus AML/watchlist review when that's
+// enabled) can genuinely take several minutes, not seconds — a shorter
+// window risks showing "start a new attempt" while the ORIGINAL attempt
+// is still legitimately in progress, tempting a user into abandoning a
+// perfectly good verification and confusing Dojah with a second
+// concurrent one. Falls through to the "still processing" screen after
+// this, not an error — the backend keeps resolving it regardless of
+// whether this screen is still open to see it happen.
+const MAX_POLLS = 75;
 
 type Step =
   | "checking"
@@ -279,18 +283,14 @@ export function KycModal({ onClose }: Props) {
               <>
                 <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mb-4" />
                 <p className="text-base font-bold text-white">Verifying your identity</p>
-                <p className="text-xs text-cowry-muted mt-2 max-w-xs">This usually takes a few seconds — you can leave this screen, we&apos;ll keep checking.</p>
-                {/* A "pending" attempt with a config error (e.g. a bad widget id) never gets a real
-                    webhook to resolve it — polling alone would wait forever. Backend doesn't block
-                    re-starting while pending (only "verified" is blocked), so this is a real escape
-                    hatch, not just a reassurance message. */}
-                <button
-                  onClick={handleStart}
-                  disabled={starting}
-                  className="mt-6 text-xs text-cowry-muted hover:text-white underline underline-offset-2 transition-colors disabled:opacity-50"
-                >
-                  {starting ? "Starting…" : "Taking too long? Start a new attempt"}
-                </button>
+                <p className="text-xs text-cowry-muted mt-2 max-w-xs">This can take a few minutes — you can leave this screen, we&apos;ll keep checking.</p>
+                {/* Deliberately NO "start a new attempt" escape hatch here — a real
+                    verification (document + selfie upload, Dojah's own processing,
+                    AML/watchlist review) can genuinely take several minutes, and
+                    offering a restart this early risks a user abandoning a perfectly
+                    good in-progress attempt. That escape hatch only shows up on the
+                    "timeout" screen below, once MAX_POLLS worth of waiting has
+                    actually passed without a result. */}
               </>
             )}
 
