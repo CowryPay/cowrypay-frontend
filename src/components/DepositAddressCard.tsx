@@ -6,8 +6,14 @@ import { QrCode } from "./QrCode";
 // chains are actually offered as a deposit destination, not the broader
 // SUPPORTED_CHAINS registry (Optimism dropped 2026-08: no off-ramp
 // provider settles sends there in practice, so depositing there would
-// strand funds). Ethereum added 2026-09-01 alongside off-ramp support.
-const SELF_CUSTODY_CHAINS = ["Celo", "Base", "Ethereum"];
+// strand funds). Ethereum was briefly offered here too (2026-09-01) but
+// pulled again on 2026-09-18 after a day of Ethereum-specific operational
+// incidents (nonce-tracking bug, an oversized static gas top-up leaking
+// dust, stuck txs) — mainnet gas cost/volatility wasn't worth it against
+// how rarely users actually funded from it. Still left in wallets/
+// chains.ts's SUPPORTED_CHAINS server-side so an existing balance there
+// stays detectable/sweepable/off-rampable — only new deposits stopped.
+const SELF_CUSTODY_CHAINS = ["Celo", "Base"];
 
 type Props = {
   address:     string;

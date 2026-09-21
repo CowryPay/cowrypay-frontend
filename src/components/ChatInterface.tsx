@@ -366,7 +366,7 @@ export function ChatInterface() {
 
       <div className="hidden lg:flex items-center justify-between px-10 py-3 text-xs text-cowry-muted flex-shrink-0">
         <span>© 2026 CowryPay</span>
-        <span>Live on Celo, Base, Ethereum, Solana &amp; Stellar</span>
+        <span>Live on Celo, Base, Solana &amp; Stellar</span>
       </div>
 
       {recordError && (
