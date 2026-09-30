@@ -73,15 +73,23 @@ export function getMe(): Promise<{ user: PublicUser; wallet: Wallet; balances: L
 /**
  * Starts (or resumes) a KYC verification attempt — throws a 400 if the user
  * is already verified, so callers must check kycStatus first rather than
- * relying on this to no-op. `providerReference` is what the Dojah widget
- * needs as `reference_id`; `redirectUrl` stays undefined for Dojah (it's an
- * embedded widget, not a redirect flow) but is here for a future provider
- * that might need one. Call this fresh every time the KYC screen opens for
- * an unverified/rejected user — never cache/reuse an old reference, the
- * backend marks the user `pending` as soon as this is called.
+ * relying on this to no-op. `country` is required: Dojah's Government Data
+ * step (live BVN/NIN/National ID lookup) only exists for Nigeria/Kenya, so
+ * the backend routes to a different EasyOnboard workflow for every other
+ * country — `widgetId` in the response is which one to actually launch,
+ * and now supersedes any static frontend config entirely (there is no
+ * longer one single correct widget id). `providerReference` is what the
+ * Dojah widget needs as `reference_id`; `redirectUrl` stays undefined for
+ * Dojah (it's an embedded widget, not a redirect flow) but is here for a
+ * future provider that might need one. Call this fresh every time the KYC
+ * screen opens for an unverified/rejected user — never cache/reuse an old
+ * reference, the backend marks the user `pending` as soon as this is
+ * called.
  */
-export function startKyc(): Promise<{ providerReference: string; redirectUrl?: string }> {
-  return authedFetch("/kyc/start", { method: "POST" });
+export function startKyc(
+  country: string,
+): Promise<{ providerReference: string; redirectUrl?: string; widgetId?: string }> {
+  return authedFetch("/kyc/start", { method: "POST", body: JSON.stringify({ country }) });
 }
 
 /**

@@ -11,14 +11,20 @@ const DOJAH_WIDGET_SRC = "https://widget.dojah.io/widget.js";
 
 const DOJAH_APP_ID = process.env.NEXT_PUBLIC_DOJAH_APP_ID;
 const DOJAH_PUBLIC_KEY = process.env.NEXT_PUBLIC_DOJAH_PUBLIC_KEY;
-const DOJAH_WIDGET_ID = process.env.NEXT_PUBLIC_DOJAH_WIDGET_ID;
-// Hardcoded fallback while the real Dojah dashboard config (#2) isn't
-// finalized yet — the whole real flow (POST /kyc/start, the widget script,
-// GET /me polling) is wired up and working today; this is the one piece
-// that has to wait on values from whoever owns the Dojah account. Once
-// the three NEXT_PUBLIC_DOJAH_* env vars are set for real, this screen
-// needs no further changes.
-const DOJAH_CONFIGURED = !!DOJAH_APP_ID && !!DOJAH_PUBLIC_KEY && !!DOJAH_WIDGET_ID;
+// No static widget id anymore — POST /kyc/start now returns the correct
+// one for the chosen country (Nigeria/Kenya get the Government-Data-
+// capable workflow, every other country gets the Government-ID-only one;
+// see backendApi.ts's startKyc comment). A single hardcoded value can't
+// represent that split, so app_id/public_key are still config, but
+// widget_id is now always whatever the backend just handed back.
+const DOJAH_CONFIGURED = !!DOJAH_APP_ID && !!DOJAH_PUBLIC_KEY;
+
+// Same list resolveCountry() validates against server-side
+// (ai-agent/offramp/countries.ts's SUPPORTED_COUNTRIES) — kept in sync by
+// hand since there's no shared package between the two repos. Needed here
+// because there's no existing signal to infer a user's country from (no
+// country field on the user, nothing captured at signup).
+const SUPPORTED_COUNTRIES = ["Nigeria", "Kenya", "Uganda", "Tanzania", "Ghana", "Malawi"];
 
 // Same support channel already used elsewhere in the app (the backend's
 // own chat help text, the cross-chain-send STUCK screen) — one contact
@@ -96,6 +102,9 @@ export function KycModal({ onClose }: Props) {
   const [step, setStep] = useState<Step>("checking");
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(false);
+  // Defaults to the largest market rather than forcing a blank choice —
+  // still changeable on the intro screen for anyone it's wrong for.
+  const [country, setCountry] = useState(SUPPORTED_COUNTRIES[0]);
   const pollsRef = useRef(0);
 
   // Step 0 — entry guard. Runs once per real kycStatus change, never
@@ -169,7 +178,8 @@ export function KycModal({ onClose }: Props) {
     setStarting(true);
     setError("");
     try {
-      const { providerReference } = await startKyc();
+      const { providerReference, widgetId } = await startKyc(country);
+      if (!widgetId) throw new Error("No verification workflow configured for that country yet");
       await loadDojahScript();
       if (!window.Connect) throw new Error("Verification widget failed to load");
 
@@ -177,7 +187,7 @@ export function KycModal({ onClose }: Props) {
         app_id: DOJAH_APP_ID!,
         p_key: DOJAH_PUBLIC_KEY!,
         type: "custom",
-        config: { widget_id: DOJAH_WIDGET_ID! },
+        config: { widget_id: widgetId },
         reference_id: providerReference,
         onSuccess: () => {
           // The widget finishing ≠ verified — the real decision arrives
@@ -264,6 +274,19 @@ export function KycModal({ onClose }: Props) {
                     ? "Your last attempt didn't go through. You can try again — have a valid ID and a few minutes ready."
                     : "Quick ID check — have a valid government ID and a few minutes ready. This runs in a secure widget, not on this screen."}
                 </p>
+                <div className="mt-5 w-full max-w-xs text-left">
+                  <label className="text-[10px] text-cowry-muted mb-1 block">Which country are you verifying from?</label>
+                  <select
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    disabled={starting}
+                    className="w-full bg-cowry-card border border-cowry-border rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-cowry-green/50 disabled:opacity-50"
+                  >
+                    {SUPPORTED_COUNTRIES.map((c) => (
+                      <option key={c} value={c} className="bg-cowry-card">{c}</option>
+                    ))}
+                  </select>
+                </div>
                 {error && (
                   <div className="mt-4 px-3 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl max-w-xs">
                     {error}
