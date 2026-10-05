@@ -88,7 +88,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   useEffect(() => {
     if (!receipt) return;
     const chain = receipt.chain.toLowerCase();
-    if (chain === "celo" || chain === "base" || chain === "optimism" || chain === "ethereum") {
+    if (chain === "celo" || chain === "base" || chain === "optimism" || chain === "ethereum" || chain === "arc") {
       setSenderAddress(wallet.address);
       return;
     }

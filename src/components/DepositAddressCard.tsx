@@ -13,7 +13,9 @@ import { QrCode } from "./QrCode";
 // how rarely users actually funded from it. Still left in wallets/
 // chains.ts's SUPPORTED_CHAINS server-side so an existing balance there
 // stays detectable/sweepable/off-rampable — only new deposits stopped.
-const SELF_CUSTODY_CHAINS = ["Celo", "Base"];
+// Arc (Circle's own USDC-native L1) added 2026-09-29 — same shared EVM
+// custodial address, confirmed live and offered as a real deposit option.
+const SELF_CUSTODY_CHAINS = ["Celo", "Base", "Arc"];
 
 type Props = {
   address:     string;
