@@ -84,12 +84,32 @@ export function getMe(): Promise<{ user: PublicUser; wallet: Wallet; balances: L
  * future provider that might need one. Call this fresh every time the KYC
  * screen opens for an unverified/rejected user — never cache/reuse an old
  * reference, the backend marks the user `pending` as soon as this is
- * called.
+ * called. NOTE: within the backend's pending-attempt TTL (30 min by
+ * default), calling this again for the SAME still-open attempt reuses its
+ * existing `providerReference`/`widgetId` rather than starting a fresh
+ * one — including the country it was originally started with, regardless
+ * of what `country` is passed here. Call `cancelKyc` first if the user is
+ * retrying with a different country than their last attempt, or the
+ * widget they get back will still be for the old one.
  */
 export function startKyc(
   country: string,
 ): Promise<{ providerReference: string; redirectUrl?: string; widgetId?: string }> {
   return authedFetch("/kyc/start", { method: "POST", body: JSON.stringify({ country }) });
+}
+
+/**
+ * Tells the backend the user backed out of the widget before finishing,
+ * reverting their kyc_status back to "unverified" so a retry isn't stuck
+ * resuming a dead attempt (or, worse, one for the wrong country — see
+ * startKyc's note). Always safe to call: idempotent on the backend
+ * (double-cancel, or one that lost a race to a webhook that just landed,
+ * both no-op), and always resolves `{ ok: true }` even if there was
+ * nothing to cancel. Fire-and-forget from the UI's perspective — don't
+ * block the user on this succeeding.
+ */
+export function cancelKyc(providerReference: string): Promise<{ ok: true }> {
+  return authedFetch("/kyc/cancel", { method: "POST", body: JSON.stringify({ providerReference }) });
 }
 
 /**

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { getMe, startKyc } from "@/lib/backendApi";
+import { cancelKyc, getMe, startKyc } from "@/lib/backendApi";
 import { getErrorMessage } from "@/lib/errors";
 
 // docs.dojah.io/sdks/javascript-library — verified live before wiring this
@@ -165,6 +165,15 @@ export function KycModal({ onClose }: Props) {
         // way to tell — fall through to the honest "processing" wait.
         setResumingIncomplete(true);
         setStep(DOJAH_CONFIGURED ? "intro" : "config-missing");
+        // Tell the backend now, not just this browser — startKyc's own
+        // dedupe (POST /kyc/cancel's whole reason for existing) reuses
+        // whatever attempt is still "pending" for this user, country
+        // included, for up to KYC_PENDING_TTL_MINUTES. Left uncancelled,
+        // picking a different country below and tapping "Try Again" would
+        // silently hand back the OLD country's widget instead of a fresh
+        // one for the new pick. Fire-and-forget: cancelKyc is idempotent
+        // and 200s regardless, so nothing here needs to wait on it.
+        void cancelKyc(local.reference).catch(() => {});
         return;
       }
       setResumingIncomplete(false);
