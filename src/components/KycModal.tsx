@@ -75,6 +75,37 @@ declare global {
   }
 }
 
+// Tracks, per user, whether the LAST attempt this browser started ever
+// actually reached onSuccess — not just what the server's kycStatus says.
+// Real gap this closes: POST /kyc/start marks kycStatus "pending"
+// immediately, before the widget even opens, so a user who opens the
+// widget and closes it right away (wrong country, changed their mind,
+// network issue) leaves the server saying "pending" for an attempt that
+// never actually ran. Dojah's own "Abandoned" webhook eventually resolves
+// that server-side, but only after ITS OWN session-timeout detection —
+// not instantly — so trusting kycStatus alone here means staring at
+// "Verifying your identity" for an attempt that visibly never started.
+function kycAttemptStorageKey(userId: string): string {
+  return `cowrypay_kyc_attempt_${userId}`;
+}
+
+function readLocalAttempt(userId: string): { reference: string; completed: boolean } | null {
+  try {
+    const raw = localStorage.getItem(kycAttemptStorageKey(userId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null; // Storage unavailable (private tab, etc.) — caller falls back to trusting the server.
+  }
+}
+
+function writeLocalAttempt(userId: string, value: { reference: string; completed: boolean }): void {
+  try {
+    localStorage.setItem(kycAttemptStorageKey(userId), JSON.stringify(value));
+  } catch {
+    // Best-effort only — worst case this specific UX nicety is skipped, nothing is incorrect.
+  }
+}
+
 function loadDojahScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (window.Connect) {
@@ -105,6 +136,11 @@ export function KycModal({ onClose }: Props) {
   // Defaults to the largest market rather than forcing a blank choice —
   // still changeable on the intro screen for anyone it's wrong for.
   const [country, setCountry] = useState(SUPPORTED_COUNTRIES[0]);
+  // True only when kycStatus is "pending" but THIS browser's own record
+  // shows the widget never actually reached onSuccess for that attempt —
+  // drives the intro screen's copy so "let's try again" is honest about
+  // why, rather than silently looking identical to a first-time visit.
+  const [resumingIncomplete, setResumingIncomplete] = useState(false);
   const pollsRef = useRef(0);
 
   // Step 0 — entry guard. Runs once per real kycStatus change, never
@@ -117,6 +153,21 @@ export function KycModal({ onClose }: Props) {
       return;
     }
     if (user.kycStatus === "pending") {
+      const local = readLocalAttempt(user.id);
+      if (local && !local.completed) {
+        // The server still says "pending" (POST /kyc/start sets that
+        // immediately, before the widget even opens), but THIS browser
+        // knows the widget was opened and closed/abandoned without ever
+        // finishing — go straight back to the real start screen (country
+        // selector included, in case that was the mistake) instead of a
+        // polling spinner that would never resolve from this end. If
+        // local is null (different device, cleared storage), there's no
+        // way to tell — fall through to the honest "processing" wait.
+        setResumingIncomplete(true);
+        setStep(DOJAH_CONFIGURED ? "intro" : "config-missing");
+        return;
+      }
+      setResumingIncomplete(false);
       // An attempt is already in flight — possibly from a previous
       // session (user backgrounded the app / closed the tab mid-widget).
       // Resume polling directly, never call /kyc/start or open a second
@@ -124,6 +175,7 @@ export function KycModal({ onClose }: Props) {
       setStep("processing");
       return;
     }
+    setResumingIncomplete(false);
     // unverified or rejected — both get the same intro screen; rejected
     // can always retry, Dojah's own flow supports re-attempting.
     setStep(DOJAH_CONFIGURED ? "intro" : "config-missing");
@@ -180,6 +232,12 @@ export function KycModal({ onClose }: Props) {
     try {
       const { providerReference, widgetId } = await startKyc(country);
       if (!widgetId) throw new Error("No verification workflow configured for that country yet");
+      // Stamped BEFORE the widget opens, not after — this is what lets a
+      // later re-entry tell "opened then abandoned" (completed stays
+      // false) apart from "genuinely finished, waiting on Dojah"
+      // (onSuccess flips it below), regardless of what the server's
+      // kycStatus says in the meantime.
+      if (user) writeLocalAttempt(user.id, { reference: providerReference, completed: false });
       await loadDojahScript();
       if (!window.Connect) throw new Error("Verification widget failed to load");
 
@@ -193,7 +251,9 @@ export function KycModal({ onClose }: Props) {
           // The widget finishing ≠ verified — the real decision arrives
           // later via webhook. Never mark verified here, only start
           // polling for the actual outcome.
+          if (user) writeLocalAttempt(user.id, { reference: providerReference, completed: true });
           setStarting(false);
+          setResumingIncomplete(false);
           setStep("processing");
         },
         onError: () => {
@@ -267,12 +327,14 @@ export function KycModal({ onClose }: Props) {
               <>
                 <span className="text-4xl mb-3">🪪</span>
                 <p className="text-base font-bold text-white">
-                  {user?.kycStatus === "rejected" ? "Let's try again" : "Verify your identity"}
+                  {user?.kycStatus === "rejected" || resumingIncomplete ? "Let's try again" : "Verify your identity"}
                 </p>
                 <p className="text-xs text-cowry-muted mt-2 max-w-xs leading-relaxed">
                   {user?.kycStatus === "rejected"
                     ? "Your last attempt didn't go through. You can try again — have a valid ID and a few minutes ready."
-                    : "Quick ID check — have a valid government ID and a few minutes ready. This runs in a secure widget, not on this screen."}
+                    : resumingIncomplete
+                      ? "Looks like your last attempt didn't finish — closed early, or maybe the wrong country was picked. Confirm your country and start again below."
+                      : "Quick ID check — have a valid government ID and a few minutes ready. This runs in a secure widget, not on this screen."}
                 </p>
                 <div className="mt-5 w-full max-w-xs text-left">
                   <label className="text-[10px] text-cowry-muted mb-1 block">Which country are you verifying from?</label>
@@ -297,7 +359,7 @@ export function KycModal({ onClose }: Props) {
                   disabled={starting}
                   className="mt-6 w-full max-w-xs bg-cowry-green text-black text-sm font-bold py-3 rounded-full active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {starting ? "Starting…" : user?.kycStatus === "rejected" ? "Try Again" : "Start Verification"}
+                  {starting ? "Starting…" : user?.kycStatus === "rejected" || resumingIncomplete ? "Try Again" : "Start Verification"}
                 </button>
               </>
             )}
@@ -313,7 +375,16 @@ export function KycModal({ onClose }: Props) {
                     offering a restart this early risks a user abandoning a perfectly
                     good in-progress attempt. That escape hatch only shows up on the
                     "timeout" screen below, once MAX_POLLS worth of waiting has
-                    actually passed without a result. */}
+                    actually passed without a result. Close is honest about what it
+                    does — there's no cancel-on-the-backend endpoint to call, this
+                    only stops watching; the real verification keeps running on
+                    Dojah's side regardless, same as leaving the screen any other way. */}
+                <button
+                  onClick={onClose}
+                  className="mt-6 text-xs text-cowry-muted hover:text-white underline underline-offset-2 transition-colors"
+                >
+                  Close — I&apos;ll check back later
+                </button>
               </>
             )}
 
@@ -330,11 +401,10 @@ export function KycModal({ onClose }: Props) {
                   </div>
                 )}
                 <button
-                  onClick={handleStart}
-                  disabled={starting}
-                  className="mt-6 w-full max-w-xs bg-cowry-green text-black text-sm font-bold py-3 rounded-full active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => { setError(""); setStep("intro"); }}
+                  className="mt-6 w-full max-w-xs bg-cowry-green text-black text-sm font-bold py-3 rounded-full active:scale-95 transition-all"
                 >
-                  {starting ? "Starting…" : "Start a New Attempt"}
+                  Start a New Attempt
                 </button>
                 <a
                   href={SUPPORT_TELEGRAM_URL}
