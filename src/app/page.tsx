@@ -41,7 +41,7 @@ const FEATURES = [
   {
     img: "/AI.png",
     title: "AI-Powered",
-    desc: "An onchain AI agent, registered with Self Agent ID (ERC-8004), parses your intent and executes.",
+    desc: "An AI agent understands what you want and drafts it for you to confirm.",
     tint: "rgba(0,212,55,0.08)",
   },
   {
@@ -294,32 +294,37 @@ export default function LandingPage() {
       {/* ── CTA ─────────────────────────────────────────────────────────── */}
       <section className="px-6 py-20">
         <div className="relative max-w-5xl mx-auto bg-[#1B1B1B] border border-[#263B25] rounded-xl px-8 py-24 text-center overflow-hidden">
-          {/* Decorative icons */}
+          {/* Brand mark as a large, faint background watermark rather than
+              small corner badges — at icon size the dark diagonal shape
+              just blended into the card and only the green dot read as a
+              floating accent. */}
           <Image
             src="/Group 2.png"
             alt=""
-            width={160}
-            height={160}
-            className="absolute top-4 right-4 opacity-30"
+            width={600}
+            height={600}
+            className="absolute -top-32 -right-32 opacity-[0.07] pointer-events-none select-none"
           />
           <Image
             src="/Group 2.png"
             alt=""
-            width={160}
-            height={160}
-            className="absolute bottom-4 left-4 opacity-50"
+            width={600}
+            height={600}
+            className="absolute -bottom-40 -left-40 opacity-[0.07] pointer-events-none select-none"
           />
 
-          <h2 className="text-3xl sm:text-5xl font-black mb-4">
-            Ready to try CowryPay?
-          </h2>
-          <p className="text-cowry-muted text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-            Open CowryPay, grant Cowry AI access, and send your
-            first payment in under a minute.
-          </p>
-          <CtaLink className="inline-flex items-center gap-2 bg-cowry-green text-black font-bold px-8 py-3 rounded-full text-sm hover:opacity-90 transition-opacity">
-            Get started, it&apos;s free →
-          </CtaLink>
+          <div className="relative z-10">
+            <h2 className="text-3xl sm:text-5xl font-black mb-4">
+              Ready to try CowryPay?
+            </h2>
+            <p className="text-cowry-muted text-sm leading-relaxed mb-8 max-w-sm mx-auto">
+              Open CowryPay, grant Cowry AI access, and send your
+              first payment in under a minute.
+            </p>
+            <CtaLink className="inline-flex items-center gap-2 bg-cowry-green text-black font-bold px-8 py-3 rounded-full text-sm hover:opacity-90 transition-opacity">
+              Get started, it&apos;s free →
+            </CtaLink>
+          </div>
         </div>
       </section>
 
