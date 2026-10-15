@@ -16,7 +16,6 @@ import { VerifyPinModal }     from "./VerifyPinModal";
 import { ReceiptModal }       from "./ReceiptModal";
 import { CryptoWithdrawalReceiptModal } from "./CryptoWithdrawalReceiptModal";
 import { CrossChainSendReceiptModal } from "./CrossChainSendReceiptModal";
-import { NotificationBell }   from "./NotificationBell";
 import { AppLockScreen }      from "./AppLockScreen";
 import { DepositModal }       from "./DepositModal";
 import { hasLocalBiometricCredential } from "@/lib/biometric";
@@ -183,8 +182,6 @@ export function ChatInterface() {
         </button>
 
         <div className="flex items-center gap-1.5 lg:gap-3">
-          <NotificationBell userId={user.id} />
-
           <button
             onClick={() => setShowTxHistory(true)}
             className="flex w-8 h-8 items-center justify-center rounded-full hover:bg-cowry-card transition-colors"
