@@ -44,6 +44,11 @@ a, button {
 .marquee-right {
   animation: marquee-right 30s linear infinite;
 }
+/* Same loop, faster — a single line of ticker text needs a brisker pace to
+   stay readable than a row of logo pills does. */
+.marquee-left-fast {
+  animation: marquee-left 18s linear infinite;
+}
 
 /* Scrollable but no visible scrollbar track — used as an overflow safety net
    on screens that should normally fit without scrolling. */
@@ -53,6 +58,15 @@ a, button {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Slide-down entrance for dismissible banners (e.g. the security-update notice) */
+@keyframes slide-down {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  100% { transform: translateY(0);     opacity: 1; }
+}
+.animate-slide-down {
+  animation: slide-down 0.35s ease-out;
 }
 
 /* Gradient border */
