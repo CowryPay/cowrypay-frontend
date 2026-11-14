@@ -1,19 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
 
-// Bump this id if a future notice needs to show again even for someone who
-// dismissed this one — dismissal is tracked per-notice, not globally, so an
-// old dismissal never silently suppresses an unrelated future announcement.
-const NOTICE_ID = "security-update-2026-11-14";
+// Bumped from "security-update-2026-11-14" now that the update is done —
+// a new id so this completion notice shows even for someone who already
+// dismissed the earlier "upcoming" one; dismissal is tracked per-notice,
+// not globally.
+const NOTICE_ID = "security-update-2026-11-14-complete";
 const STORAGE_KEY = `cowry_notice_dismissed_${NOTICE_ID}`;
 
-// No announced maintenance window — visible through the end of the day
-// itself, then this component simply stops rendering on its own; nothing
-// needs to come back and remove it afterward.
-const NOTICE_EXPIRES_AT = new Date("2026-11-15T00:00:00").getTime();
+// Short confirmation window — through the end of Nov 16, then this
+// component simply stops rendering on its own; nothing needs to come back
+// and remove it afterward.
+const NOTICE_EXPIRES_AT = new Date("2026-11-17T00:00:00").getTime();
 
 const NOTICE_TEXT =
-  "Scheduled security update — Saturday, Nov 14. CowryPay may be briefly unavailable at points during the day. Your funds are always safe — this doesn't touch your balance or wallet in any way.";
+  "Security update complete — everything's back to normal. Your funds were safe throughout, and nothing about your balance or wallet changed.";
 
 function ShieldIcon({ className }: { className: string }) {
   return (
