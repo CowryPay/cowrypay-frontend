@@ -16,7 +16,6 @@ import { VerifyPinModal }     from "./VerifyPinModal";
 import { ReceiptModal }       from "./ReceiptModal";
 import { CryptoWithdrawalReceiptModal } from "./CryptoWithdrawalReceiptModal";
 import { CrossChainSendReceiptModal } from "./CrossChainSendReceiptModal";
-import { SecurityNoticeBanner } from "./SecurityNoticeBanner";
 import { AppLockScreen }      from "./AppLockScreen";
 import { DepositModal }       from "./DepositModal";
 import { hasLocalBiometricCredential } from "@/lib/biometric";
@@ -215,8 +214,6 @@ export function ChatInterface() {
           </button>
         </div>
       </div>
-
-      <SecurityNoticeBanner />
 
       <div className="relative flex-1 min-h-0 overflow-y-auto px-3 lg:px-10 py-4">
        <div className="space-y-2 lg:max-w-3xl lg:mx-auto">
