@@ -125,7 +125,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
    * forwards the message and turns a resolved draft into a confirm card.
    */
   const fetchAgentResponse = useCallback(async (text: string, signal?: AbortSignal): Promise<ChatResponse> => {
-    const { reply, pendingSend, pendingCryptoWithdrawal, pendingCrossChainSend, pendingInternalTransfer } =
+    const { reply, pendingSend, pendingCryptoWithdrawal, pendingCrossChainSend, pendingInternalTransfer, requiredAction } =
       await sendChatMessage(text, signal);
     if (pendingInternalTransfer) {
       pendingSendRef.current = null;
@@ -291,6 +291,15 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
         reference: pendingSend.reference,
       };
     }
+    // Off-ramp/on-ramp refused for missing KYC — same "direct them how to
+    // fix it" treatment as the `!user.pinSet` check in confirm() below,
+    // just triggered server-side instead of client-side.
+    if (requiredAction === "verify_identity") {
+      return {
+        type: "info",
+        message: `${reply} Tap the ⚙️ Settings icon (top right) → Security & Privacy → Identity Verification, then come back and try again.`,
+      };
+    }
     return { type: "info", message: reply };
   }, []);
 
@@ -406,6 +415,20 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
     ) return;
     if (memo !== undefined && pendingCryptoWithdrawalRef.current) {
       pendingCryptoWithdrawalRef.current = { ...pendingCryptoWithdrawalRef.current, memo: memo || undefined };
+    }
+    // Off-ramp (bank send) only — crypto withdrawal/cross-chain/internal
+    // transfer still only need the PIN, per the backend's own KYC gate.
+    // Checked before the PIN (same order the backend checks in, and same
+    // reasoning: don't spend a PIN attempt on a send that can't go out).
+    // Normally caught earlier in chat itself (requiredAction above), this
+    // is the same defense-in-depth the backend's own initiateSend has, for
+    // a draft resolved while verified whose KYC status changed since.
+    if (pendingSendRef.current && user?.kycStatus !== "verified") {
+      addMessage({
+        role: "bot",
+        text: "You'll need to verify your identity before sending to a bank account. Tap the ⚙️ Settings icon (top right) → Security & Privacy → Identity Verification, then come back and try again.",
+      });
+      return;
     }
     if (!user?.pinSet) {
       addMessage({

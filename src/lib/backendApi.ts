@@ -363,6 +363,10 @@ export function sendChatMessage(
   pendingCryptoWithdrawal?: CryptoWithdrawalDraft;
   pendingCrossChainSend?: CrossChainSendDraft;
   pendingInternalTransfer?: InternalTransferDraft;
+  // Set when an off-ramp or on-ramp request was refused for missing KYC —
+  // same idea as the client's own `!user.pinSet` check, just server-driven.
+  // Only ever "verify_identity" today.
+  requiredAction?: "verify_identity";
 }> {
   return authedFetch("/chat", { method: "POST", body: JSON.stringify({ message }), signal });
 }
