@@ -244,7 +244,7 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                       : "This payment failed. Check Transaction History for details, or try sending again."
                     : state === "MANUAL_REVIEW"
                       ? "This payment is under manual review — we'll notify you once it clears. Safe to close this and check back in Transaction History."
-                      : "This usually takes a minute or two — bank settlement isn't instant. You can close this — it'll keep processing in the background."}
+                      : "We'll update this the moment it's done. You can close this — it'll keep processing in the background."}
                 </p>
               </div>
             )}
@@ -299,6 +299,12 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                       )}
                       <DetailRow label="NETWORK" value={receipt.chain.toUpperCase()} />
                       <DetailRow label="YOU SENT" value={`${formatToken(receipt.amountSent)} ${receipt.tokenSymbol}`} />
+                      {receipt.rate != null && (
+                        <DetailRow
+                          label="RATE"
+                          value={`1 ${receipt.tokenSymbol} ≈ ${formatFiat(receipt.rate, receipt.fiatCurrency)}`}
+                        />
+                      )}
                     </div>
 
                     {receipt.withdrawTxHash && explorerUrlFor(receipt.chain, receipt.withdrawTxHash) && (

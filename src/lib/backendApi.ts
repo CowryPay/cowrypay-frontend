@@ -213,6 +213,9 @@ export type SendReceipt = {
   chain:                string;
   fiatCurrency:         string;
   fiatAmountReceived:   string | null;
+  // Fiat per 1 token the recipient was paid at. Null only for a very old
+  // send from before the backend started returning it.
+  rate:                 string | null;
   recipient: {
     accountName:              string;
     accountIdentifierMasked:  string;
