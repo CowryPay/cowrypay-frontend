@@ -294,6 +294,9 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
                         value={receipt.recipient.accountName}
                         sub={`${receipt.recipient.institutionName} • ${receipt.recipient.accountIdentifierMasked}`}
                       />
+                      {receipt.bankSessionId && (
+                        <DetailRow label="SESSION ID" value={receipt.bankSessionId} mono wrap />
+                      )}
                       {senderAddress && (
                         <DetailRow label="WALLET ADDRESS" value={shortenAddress(senderAddress)} mono />
                       )}
@@ -349,15 +352,17 @@ export function ReceiptModal({ sendId, wallet, onClose }: Props) {
   );
 }
 
-function DetailRow({ label, value, sub, mono }: { label: string; value: string; sub?: string; mono?: boolean }) {
+function DetailRow({
+  label, value, sub, mono, wrap,
+}: { label: string; value: string; sub?: string; mono?: boolean; wrap?: boolean }) {
   return (
     <div>
-      <div className="flex items-center justify-between gap-3">
+      <div className={`flex ${wrap ? "flex-col items-start" : "items-center justify-between"} gap-1 gap-x-3`}>
         <span className="text-[11px] text-cowry-muted tracking-wide flex-shrink-0 leading-relaxed py-0.5">
           {label}
         </span>
         <span
-          className={`text-right min-w-0 truncate font-semibold text-white leading-relaxed py-0.5 ${mono ? "font-mono text-xs" : "text-sm"}`}
+          className={`${wrap ? "text-left break-all" : "text-right min-w-0 truncate"} font-semibold text-white leading-relaxed py-0.5 ${mono ? "font-mono text-xs" : "text-sm"}`}
         >
           {value}
         </span>

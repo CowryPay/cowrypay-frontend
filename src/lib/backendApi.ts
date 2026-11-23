@@ -225,6 +225,10 @@ export type SendReceipt = {
   createdAt:      string;
   completedAt:    string;
   withdrawTxHash: string | null;
+  provider:       string;
+  // The NIBSS session ID for a Nomba bank transfer, so the user can trace
+  // it with their own bank — null for providers that don't set one.
+  bankSessionId:  string | null;
 };
 
 /** Only available once a send has reached COMPLETE — 400s otherwise. */
