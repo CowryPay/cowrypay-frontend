@@ -126,6 +126,21 @@ function loadDojahScript(): Promise<void> {
   });
 }
 
+// iOS's "Add to Home Screen" standalone mode (the PWA install we offer)
+// runs on WKWebView, where getUserMedia for the Dojah widget's selfie step
+// has a long-standing, still-open WebKit bug (webkit.org bugs 208667,
+// 252465 — reports as recent as iOS 26): the camera step just hangs with
+// no error, exactly like a user stuck on "Take a selfie" with nothing
+// happening when they tap the button. Regular Safari isn't affected. No
+// code-level fix exists for a platform bug like this — the only real
+// workaround is completing this one step outside the installed app.
+function isStandaloneIOS(): boolean {
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return standalone && /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
 type Props = { onClose: () => void };
 
 export function KycModal({ onClose }: Props) {
@@ -141,7 +156,15 @@ export function KycModal({ onClose }: Props) {
   // drives the intro screen's copy so "let's try again" is honest about
   // why, rather than silently looking identical to a first-time visit.
   const [resumingIncomplete, setResumingIncomplete] = useState(false);
+  // Checked once on mount — see isStandaloneIOS's own comment. Drives a
+  // warning on the intro screen so this is caught before the user wastes
+  // a BVN/selfie attempt, not after they're already stuck on it.
+  const [standaloneIOSWarning, setStandaloneIOSWarning] = useState(false);
   const pollsRef = useRef(0);
+
+  useEffect(() => {
+    setStandaloneIOSWarning(isStandaloneIOS());
+  }, []);
 
   // Step 0 — entry guard. Runs once per real kycStatus change, never
   // re-derives step from a stale closure since it reads straight off
@@ -345,6 +368,15 @@ export function KycModal({ onClose }: Props) {
                       ? "Looks like your last attempt didn't finish — closed early, or maybe the wrong country was picked. Confirm your country and start again below."
                       : "Quick ID check — have a valid government ID and a few minutes ready. This runs in a secure widget, not on this screen."}
                 </p>
+                {standaloneIOSWarning && (
+                  <div className="mt-4 px-3 py-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs rounded-xl max-w-xs text-left leading-relaxed">
+                    ⚠️ iOS bug: the selfie step can hang forever in the installed app. If that happens, open{" "}
+                    <a href="https://cowrypay.xyz/app" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
+                      cowrypay.xyz
+                    </a>{" "}
+                    in Safari instead (not from your Home Screen icon) and finish verification there.
+                  </div>
+                )}
                 <div className="mt-5 w-full max-w-xs text-left">
                   <label className="text-[10px] text-cowry-muted mb-1 block">Which country are you verifying from?</label>
                   <select
