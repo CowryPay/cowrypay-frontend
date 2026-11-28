@@ -279,7 +279,7 @@ export function saveRecipient(input: {
  * the PIN, and submits it to createOfframpSend. Chat can only ever propose,
  * never execute (a message alone must never be sufficient to move money).
  */
-export type OfframpProvider = "paycrest" | "quidax" | "centiiv";
+export type OfframpProvider = "paycrest" | "quidax" | "centiiv" | "nomba";
 
 export type RemittanceDraft = {
   amount:          string;

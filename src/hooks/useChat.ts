@@ -23,6 +23,23 @@ function newSessionId(): string {
   return `session_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
 }
 
+/**
+ * How long a quote's `validUntil` has left, as shown-once preview text —
+ * never hardcode a duration here, since it's provider-dependent and has
+ * changed before (Nomba's quote window is 5 minutes, not the ~1hr this
+ * used to assume for every provider).
+ */
+function formatTimeLeft(validUntil: string): string {
+  const ms = new Date(validUntil).getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return "expiring any moment";
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds}s`;
+  if (seconds === 0) return `${minutes} min`;
+  return `${minutes}m ${seconds}s`;
+}
+
 /** Clear server pending state after this long without a user message. */
 const IDLE_RESET_MS = 20 * 60 * 1000;
 
@@ -272,7 +289,7 @@ export function useChat(user: PublicUser | null, onDepositIntent?: (chain: strin
         `They get: ${formatFiat(receiveAmount, pendingSend.fiatCurrency)} ${pendingSend.fiatCurrency}`,
         `You send: ${sendAmount} ${sendToken} (${pendingSend.chain})`,
         `Fee: ${feeAmount} ${sendToken}`,
-        `Rate: 1 USD ≈ ${formatFiat(pendingSend.rate, pendingSend.fiatCurrency)} (locked for ~1hr)`,
+        `Rate: 1 USD ≈ ${formatFiat(pendingSend.rate, pendingSend.fiatCurrency)} (locked for ${formatTimeLeft(pendingSend.validUntil)})`,
         "",
         "Reply confirm to send, or cancel to abort.",
       ].join("\n");
